@@ -16,6 +16,23 @@
 - **Gateway Pattern**: API service acts as gateway, microservices remain simple and testable
 - **API-First Development**: Design and test APIs before building UI components
 
+## Database Conventions
+- **Table Names**: ALL_CAPS (e.g., FOOD_CATALOG, USER_PROFILES)
+- **Column Names**: snake_case (e.g., food_name, created_at, nutritional_info)
+- **Boolean Columns**: Prefixed with `is_` (e.g., is_non_inflammatory, is_active)
+- **Go Struct Mapping**: SQLBoiler automatically maps snake_case columns to camelCase struct fields
+  - `food_name` → `FoodName`
+  - `created_at` → `CreatedAt`
+  - `nutritional_info` → `NutritionalInfo`
+
+## Database Modification Procedures
+When adding columns or changing table structure:
+1. **Drop constraints**: Remove foreign keys and other constraints
+2. **Truncate table**: Clear existing data
+3. **Apply schema changes**: Add/modify columns
+4. **Reload seed data**: Insert updated sample data
+5. **Restore constraints**: Add back foreign keys and constraints
+
 ## Testing Approach
 - **Unit Tests**: 
   - Use `stretchr/testify` for assertions
