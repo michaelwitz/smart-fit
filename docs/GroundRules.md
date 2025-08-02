@@ -25,6 +25,14 @@
   - `created_at` → `CreatedAt`
   - `nutritional_info` → `NutritionalInfo`
 
+## JSON API Conventions
+- **JSON Field Names**: camelCase (e.g., fullName, createdAt, phoneNumber)
+- **Go Struct Fields**: PascalCase (e.g., FullName, CreatedAt, PhoneNumber)
+- **JSON Tags**: Map Go PascalCase to JSON camelCase
+  - `FullName string \`json:"fullName"\``
+  - `CreatedAt time.Time \`json:"createdAt"\``
+  - `PhoneNumber *string \`json:"phoneNumber"\``
+
 ## Database Modification Procedures
 When adding columns or changing table structure:
 1. **Drop constraints**: Remove foreign keys and other constraints

@@ -136,6 +136,180 @@ You can also test individual services directly:
 - **Meal Service**: `http://localhost:8083/meals/health`
 - **Tracking Service**: `http://localhost:8084/tracking/health`
 
+## Developer Setup and Notes
+
+### Local Development Ports (Docker Desktop)
+When running locally with `docker-compose`, services are accessible on these ports:
+
+| Service | Container Port | Host Port | Local URL |
+|---------|----------------|-----------|----------|
+| **API Service** (Gateway) | 8080 | 8080 | http://localhost:8080 |
+| **User Service** | 8080 | 8082 | http://localhost:8082 |
+| **Meal Service** | 8080 | 8083 | http://localhost:8083 |
+| **Tracking Service** | 8080 | 8084 | http://localhost:8084 |
+| **Web Client** (React) | 3000 | 3000 | http://localhost:3000 |
+| **PostgreSQL** | 5432 | 5432 | localhost:5432 |
+
+> **Note**: These ports are for local development only. Production/cloud deployments will use different port configurations.
+
+### Development Workflow
+1. **Start services**: `make up` or `docker-compose up -d`
+2. **View logs**: `make logs` or `docker-compose logs -f [service-name]`
+3. **Stop services**: `make down` or `docker-compose down`
+4. **Rebuild after code changes**: `docker-compose build [service-name]`
+
+### Testing Individual Services
+During development, you can test services directly:
+
+#### Health Check Endpoints
+```bash
+curl http://localhost:8080/health  # API Service
+curl http://localhost:8082/health  # User Service
+curl http://localhost:8083/health  # Meal Service
+curl http://localhost:8084/health  # Tracking Service
+```
+
+#### User Service Examples
+```bash
+# Get all users
+curl http://localhost:8082/users
+
+# Create a user with full profile
+curl -X POST http://localhost:8082/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullName": "Jane Smith",
+    "email": "jane@example.com",
+    "password": "password123",
+    "phoneNumber": "+1234567890",
+    "identifyAs": "She/Her",
+    "city": "New York",
+    "stateProvince": "NY",
+    "postalCode": "10001",
+    "countryCode": "US",
+    "locale": "en-US",
+    "timezone": "America/New_York",
+    "utcOffset": -5
+  }'
+
+# Get user by ID
+curl http://localhost:8082/users/1
+
+# Update user (partial update)
+curl -X PUT http://localhost:8082/users/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "city": "San Francisco",
+    "stateProvince": "CA",
+    "postalCode": "94105",
+    "timezone": "America/Los_Angeles",
+    "utcOffset": -8
+  }'
+
+# Upsert user (create or update by email)
+curl -X POST http://localhost:8082/users/upsert \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullName": "John Doe Updated",
+    "email": "john@example.com",
+    "password": "newpassword123",
+    "city": "Chicago",
+    "locale": "es-US"
+  }'
+
+# Verify user credentials
+curl -X POST http://localhost:8082/users/verify \
+  -H "Content-Type: application/json" \
+  -d '{"email":"jane@example.com","password":"password123"}'
+
+# Delete user
+curl -X DELETE http://localhost:8082/users/1
+```
+
+#### API Service Authentication
+```bash
+# Login (get JWT token)
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"jane@example.com","password":"password123"}'
+
+# Example response:
+# {
+#   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "user": {
+#     "id": 1,
+#     "fullName": "Jane Smith",
+#     "email": "jane@example.com",
+#     "locale": "en-US",
+#     "timezone": "America/New_York"
+#   }
+# }
+
+# Use JWT token for protected endpoints
+export JWT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+curl -H "Authorization: Bearer $JWT_TOKEN" \
+  http://localhost:8080/api/users/profile
+```
+
+#### Meal Service Examples (when implemented)
+```bash
+# Get all meals
+curl http://localhost:8083/meals
+
+# Create a meal plan
+curl -X POST http://localhost:8083/meals \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{
+    "name": "Healthy Breakfast",
+    "calories": 350,
+    "protein": 20,
+    "carbs": 45,
+    "fat": 12
+  }'
+```
+
+#### Tracking Service Examples (when implemented)
+```bash
+# Daily check-in
+curl -X POST http://localhost:8084/tracking/checkin \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{
+    "weight": 150.5,
+    "mood": 8,
+    "sleep_hours": 7.5,
+    "energy_level": 7
+  }'
+
+# Get tracking history
+curl -H "Authorization: Bearer $JWT_TOKEN" \
+  http://localhost:8084/tracking/history?days=30
+```
+
+### Database Access
+```bash
+# Connect to PostgreSQL (password: smartfit123)
+psql -h localhost -p 5432 -U smartfit -d smartfitgirl
+
+# View users table
+SELECT * FROM USERS;
+```
+
+### Service Architecture Notes
+- **API Service**: Acts as gateway, handles authentication, routes requests
+- **Microservices**: Handle specific business logic (users, meals, tracking)
+- **Internal Communication**: Services communicate via Docker network using service names
+- **External Access**: Use localhost ports for development/testing
+- **Database**: Shared PostgreSQL instance across all services
+
+### Key Features Implementation
+- **Authentication**: JWT tokens with bcrypt password hashing
+- **International Support**: User profiles include `locale`, `postal_code`, `timezone`, `utc_offset`
+- **Security**: Parameterized SQL queries prevent injection attacks
+- **CRUD Operations**: Complete user management with upsert functionality
+- **Service Discovery**: Docker Compose networking for inter-service communication
+
 ## Development
 
 See individual service READMEs for specific development instructions:

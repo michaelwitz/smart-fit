@@ -1,0 +1,556 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+type User struct {
+	ID            int       `json:"id" db:"id"`
+	FullName      string    `json:"fullName" db:"full_name"`
+	Email         string    `json:"email" db:"email"`
+	Password      string    `json:"password,omitempty" db:"password"` // omitempty for security
+	PhoneNumber   *string   `json:"phoneNumber" db:"phone_number"`
+	IdentifyAs    *string   `json:"identifyAs" db:"identify_as"`
+	City          *string   `json:"city" db:"city"`
+	StateProvince *string   `json:"stateProvince" db:"state_province"`
+	PostalCode    *string   `json:"postalCode" db:"postal_code"`
+	CountryCode   *string   `json:"countryCode" db:"country_code"`
+	Locale        *string   `json:"locale" db:"locale"`
+	Timezone      *string   `json:"timezone" db:"timezone"`
+	UtcOffset     *int      `json:"utcOffset" db:"utc_offset"`
+	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+type CreateUserRequest struct {
+	FullName      string  `json:"fullName"`
+	Email         string  `json:"email"`
+	Password      string  `json:"password"`
+	PhoneNumber   *string `json:"phoneNumber"`
+	IdentifyAs    *string `json:"identifyAs"`
+	City          *string `json:"city"`
+	StateProvince *string `json:"stateProvince"`
+	PostalCode    *string `json:"postalCode"`
+	CountryCode   *string `json:"countryCode"`
+	Locale        *string `json:"locale"`
+	Timezone      *string `json:"timezone"`
+	UtcOffset     *int    `json:"utcOffset"`
+}
+
+type UpsertUserRequest struct {
+	FullName      string  `json:"fullName"`
+	Email         string  `json:"email"`
+	Password      *string `json:"password"` // Optional for updates, required for new users
+	PhoneNumber   *string `json:"phoneNumber"`
+	IdentifyAs    *string `json:"identifyAs"`
+	City          *string `json:"city"`
+	StateProvince *string `json:"stateProvince"`
+	PostalCode    *string `json:"postalCode"`
+	CountryCode   *string `json:"countryCode"`
+	Locale        *string `json:"locale"`
+	Timezone      *string `json:"timezone"`
+	UtcOffset     *int    `json:"utcOffset"`
+}
+
+type UpdateUserRequest struct {
+	FullName      *string `json:"fullName"`
+	Email         *string `json:"email"`
+	PhoneNumber   *string `json:"phoneNumber"`
+	IdentifyAs    *string `json:"identifyAs"`
+	City          *string `json:"city"`
+	StateProvince *string `json:"stateProvince"`
+	PostalCode    *string `json:"postalCode"`
+	CountryCode   *string `json:"countryCode"`
+	Locale        *string `json:"locale"`
+	Timezone      *string `json:"timezone"`
+	UtcOffset     *int    `json:"utcOffset"`
+}
+
+type VerifyUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type VerifyUserResponse struct {
+	Valid bool `json:"valid"`
+	User  *User `json:"user,omitempty"`
+}
+
+func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
+	query := `
+		SELECT id, full_name, email, phone_number, identify_as, city, 
+		       state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at 
+		FROM USERS 
+		ORDER BY created_at DESC`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var user User
+		err := rows.Scan(
+			&user.ID, &user.FullName, &user.Email, &user.PhoneNumber,
+			&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
+			&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset, 
+			&user.CreatedAt, &user.UpdatedAt,
+		)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Scan error: %v", err), http.StatusInternalServerError)
+			return
+		}
+		users = append(users, user)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func (s *Server) getUserByID(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL path
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) != 2 {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(pathParts[1])
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	query := `
+		SELECT id, full_name, email, phone_number, identify_as, city, 
+		       state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at 
+		FROM USERS 
+		WHERE id = $1`
+
+	var user User
+	err = s.db.QueryRow(query, id).Scan(
+		&user.ID, &user.FullName, &user.Email, &user.PhoneNumber,
+		&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
+		&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset,
+		&user.CreatedAt, &user.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
+	var req CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if req.FullName == "" || req.Email == "" || req.Password == "" {
+		http.Error(w, "full_name, email, and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+		return
+	}
+
+	query := `
+		INSERT INTO USERS (full_name, email, password, phone_number, identify_as, 
+		                  city, state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		RETURNING id, created_at, updated_at`
+
+	var user User
+	err = s.db.QueryRow(
+		query, req.FullName, req.Email, string(hashedPassword),
+		req.PhoneNumber, req.IdentifyAs, req.City, req.StateProvince,
+		req.PostalCode, req.CountryCode, req.Locale, req.Timezone, req.UtcOffset,
+	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			http.Error(w, "User with this email already exists", http.StatusConflict)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Fill in the response user object (excluding password)
+	user.FullName = req.FullName
+	user.Email = req.Email
+	user.PhoneNumber = req.PhoneNumber
+	user.IdentifyAs = req.IdentifyAs
+	user.City = req.City
+	user.StateProvince = req.StateProvince
+	user.PostalCode = req.PostalCode
+	user.CountryCode = req.CountryCode
+	user.Locale = req.Locale
+	user.Timezone = req.Timezone
+	user.UtcOffset = req.UtcOffset
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(user)
+}
+
+func (s *Server) upsertUser(w http.ResponseWriter, r *http.Request) {
+	var req UpsertUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if req.FullName == "" || req.Email == "" {
+		http.Error(w, "full_name and email are required", http.StatusBadRequest)
+		return
+	}
+
+	// Check if user exists
+	var existingUserID int
+	var existingPassword string
+	err := s.db.QueryRow("SELECT id, password FROM USERS WHERE email = $1", req.Email).Scan(&existingUserID, &existingPassword)
+	
+	if err == sql.ErrNoRows {
+		// User doesn't exist - INSERT (password is required for new users)
+		if req.Password == nil || *req.Password == "" {
+			http.Error(w, "password is required for new users", http.StatusBadRequest)
+			return
+		}
+
+		// Hash password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+			return
+		}
+
+		query := `
+			INSERT INTO USERS (full_name, email, password, phone_number, identify_as, 
+			                  city, state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			RETURNING id, created_at, updated_at`
+
+		var user User
+		err = s.db.QueryRow(
+			query, req.FullName, req.Email, string(hashedPassword),
+			req.PhoneNumber, req.IdentifyAs, req.City, req.StateProvince,
+			req.PostalCode, req.CountryCode, req.Locale, req.Timezone, req.UtcOffset,
+		).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Fill in the response user object (excluding password)
+		user.FullName = req.FullName
+		user.Email = req.Email
+		user.PhoneNumber = req.PhoneNumber
+		user.IdentifyAs = req.IdentifyAs
+		user.City = req.City
+		user.StateProvince = req.StateProvince
+		user.PostalCode = req.PostalCode
+		user.CountryCode = req.CountryCode
+		user.Locale = req.Locale
+		user.Timezone = req.Timezone
+		user.UtcOffset = req.UtcOffset
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(user)
+
+	} else if err != nil {
+		// Database error
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	} else {
+		// User exists - UPDATE (password update is optional)
+		passwordToUse := existingPassword // Keep existing password by default
+		
+		// If new password is provided, hash it
+		if req.Password != nil && *req.Password != "" {
+			hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+			if err != nil {
+				http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+				return
+			}
+			passwordToUse = string(hashedPassword)
+		}
+
+		query := `
+			UPDATE USERS 
+			SET full_name = $1, password = $2, phone_number = $3, identify_as = $4, 
+			    city = $5, state_province = $6, postal_code = $7, country_code = $8, locale = $9, timezone = $10, 
+			    utc_offset = $11, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $12
+			RETURNING id, full_name, email, phone_number, identify_as, city, 
+			          state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at`
+
+		var user User
+		err = s.db.QueryRow(
+			query, req.FullName, passwordToUse, req.PhoneNumber, req.IdentifyAs,
+			req.City, req.StateProvince, req.PostalCode, req.CountryCode, req.Locale, req.Timezone, 
+			req.UtcOffset, existingUserID,
+		).Scan(
+			&user.ID, &user.FullName, &user.Email, &user.PhoneNumber,
+			&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
+			&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset, 
+			&user.CreatedAt, &user.UpdatedAt,
+		)
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(user)
+	}
+}
+
+func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL path
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) != 2 {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(pathParts[1])
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	var req UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Build dynamic update query
+	setParts := []string{}
+	args := []interface{}{}
+	argIndex := 1
+
+	if req.FullName != nil {
+		setParts = append(setParts, fmt.Sprintf("full_name = $%d", argIndex))
+		args = append(args, *req.FullName)
+		argIndex++
+	}
+	if req.Email != nil {
+		setParts = append(setParts, fmt.Sprintf("email = $%d", argIndex))
+		args = append(args, *req.Email)
+		argIndex++
+	}
+	if req.PhoneNumber != nil {
+		setParts = append(setParts, fmt.Sprintf("phone_number = $%d", argIndex))
+		args = append(args, *req.PhoneNumber)
+		argIndex++
+	}
+	if req.IdentifyAs != nil {
+		setParts = append(setParts, fmt.Sprintf("identify_as = $%d", argIndex))
+		args = append(args, *req.IdentifyAs)
+		argIndex++
+	}
+	if req.City != nil {
+		setParts = append(setParts, fmt.Sprintf("city = $%d", argIndex))
+		args = append(args, *req.City)
+		argIndex++
+	}
+	if req.StateProvince != nil {
+		setParts = append(setParts, fmt.Sprintf("state_province = $%d", argIndex))
+		args = append(args, *req.StateProvince)
+		argIndex++
+	}
+	if req.PostalCode != nil {
+		setParts = append(setParts, fmt.Sprintf("postal_code = $%d", argIndex))
+		args = append(args, *req.PostalCode)
+		argIndex++
+	}
+	if req.CountryCode != nil {
+		setParts = append(setParts, fmt.Sprintf("country_code = $%d", argIndex))
+		args = append(args, *req.CountryCode)
+		argIndex++
+	}
+	if req.Locale != nil {
+		setParts = append(setParts, fmt.Sprintf("locale = $%d", argIndex))
+		args = append(args, *req.Locale)
+		argIndex++
+	}
+	if req.Timezone != nil {
+		setParts = append(setParts, fmt.Sprintf("timezone = $%d", argIndex))
+		args = append(args, *req.Timezone)
+		argIndex++
+	}
+	if req.UtcOffset != nil {
+		setParts = append(setParts, fmt.Sprintf("utc_offset = $%d", argIndex))
+		args = append(args, *req.UtcOffset)
+		argIndex++
+	}
+
+	if len(setParts) == 0 {
+		http.Error(w, "No fields to update", http.StatusBadRequest)
+		return
+	}
+
+	// Always update the updated_at field
+	setParts = append(setParts, "updated_at = CURRENT_TIMESTAMP")
+	args = append(args, id)
+
+	query := fmt.Sprintf(`
+		UPDATE USERS 
+		SET %s 
+		WHERE id = $%d
+		RETURNING id, full_name, email, phone_number, identify_as, city, 
+		          state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at`,
+		strings.Join(setParts, ", "), argIndex)
+
+	var user User
+	err = s.db.QueryRow(query, args...).Scan(
+		&user.ID, &user.FullName, &user.Email, &user.PhoneNumber,
+		&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
+		&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset, 
+		&user.CreatedAt, &user.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			http.Error(w, "User with this email already exists", http.StatusConflict)
+			return
+		}
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL path
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) != 2 {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(pathParts[1])
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	query := `DELETE FROM USERS WHERE id = $1`
+	result, err := s.db.Exec(query, id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"message": "User deleted successfully"}`)
+}
+
+func (s *Server) verifyUser(w http.ResponseWriter, r *http.Request) {
+	var req VerifyUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if req.Email == "" || req.Password == "" {
+		http.Error(w, "email and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Get user from database
+	query := `
+		SELECT id, full_name, email, password, phone_number, identify_as, city, 
+		       state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at 
+		FROM USERS 
+		WHERE email = $1`
+
+	var user User
+	var storedPassword string
+	err := s.db.QueryRow(query, req.Email).Scan(
+		&user.ID, &user.FullName, &user.Email, &storedPassword, &user.PhoneNumber,
+		&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
+		&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset, 
+		&user.CreatedAt, &user.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		// User not found - return invalid without revealing this
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(VerifyUserResponse{Valid: false})
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Verify password
+	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(req.Password))
+	if err != nil {
+		// Password doesn't match - return invalid
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(VerifyUserResponse{Valid: false})
+		return
+	}
+
+	// Password matches - return valid with user data (excluding password)
+	user.Password = "" // Clear password field for security
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(VerifyUserResponse{Valid: true, User: &user})
+}
