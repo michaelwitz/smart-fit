@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: smart-fit-postgres
+    environment:
+      POSTGRES_DB: smartfitgirl
+      POSTGRES_USER: smartfit
+      POSTGRES_PASSWORD: smartfit123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - smart-fit-network
+
+  # User Service
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: smart-fit-user-service
+    ports:
+      - "8082:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres  # Override for Docker network
+    depends_on:
+      - postgres
+    networks:
+      - smart-fit-network
+
+  # Meal Service
+  meal-service:
+    build:
+      context: ./services/meal-service
+      dockerfile: Dockerfile
+    container_name: smart-fit-meal-service
+    ports:
+      - "8083:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres  # Override for Docker network
+    depends_on:
+      - postgres
+    networks:
+      - smart-fit-network
+
+  # Tracking Service
+  tracking-service:
+    build:
+      context: ./services/tracking-service
+      dockerfile: Dockerfile
+    container_name: smart-fit-tracking-service
+    ports:
+      - "8084:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres  # Override for Docker network
+    depends_on:
+      - postgres
+    networks:
+      - smart-fit-network
+
+  # API Service (Main API Gateway)
+  api-service:
+    build:
+      context: ./services/api-service
+      dockerfile: Dockerfile
+    container_name: smart-fit-api-service
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - user-service
+      - meal-service
+      - tracking-service
+    networks:
+      - smart-fit-network
+
+  # Web Client
+  web-client:
+    build:
+      context: ./web-client
+      dockerfile: Dockerfile
+    container_name: smart-fit-web-client
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - api-service
+    networks:
+      - smart-fit-network
+
+volumes:
+  postgres_data:
+
+networks:
+  smart-fit-network:
+    driver: bridge
