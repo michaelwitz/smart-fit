@@ -1,3 +1,34 @@
+// Package main Smart Fit Girl API Service
+//
+// This is the main API gateway for the Smart Fit Girl application.
+// It handles authentication, routing, and proxying requests to microservices.
+//
+// Terms Of Service: http://swagger.io/terms/
+//
+// Schemes: http, https
+// Host: localhost:8080
+// BasePath: /
+// Version: 1.0.0
+// License: MIT http://opensource.org/licenses/MIT
+// Contact: Smart Fit Girl Team <dev@smartfitgirl.com>
+//
+// Consumes:
+// - application/json
+//
+// Produces:
+// - application/json
+//
+// Security:
+// - Bearer: []
+//
+// SecurityDefinitions:
+// Bearer:
+//   type: apiKey
+//   name: Authorization
+//   in: header
+//   description: "JWT Authorization header using the Bearer scheme. Example: 'Bearer {token}'"
+//
+// swagger:meta
 package main
 
 import (
@@ -12,23 +43,30 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
+	_ "api-service/docs" // Import generated docs
 )
 
+// LoginRequest defines the request payload for user authentication
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Email    string `json:"email" binding:"required" example:"user@example.com" validate:"required,email"`
+	Password string `json:"password" binding:"required" example:"password123" validate:"required,min=6"`
 }
 
+// LoginResponse defines the response payload for successful authentication
 type LoginResponse struct {
-	Token string      `json:"token"`
+	Token string      `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 	User  interface{} `json:"user"`
 }
 
+// UserServiceResponse defines the response from user service verification
 type UserServiceResponse struct {
 	Valid bool        `json:"valid"`
 	User  interface{} `json:"user"`
 }
 
+// Claims defines the JWT token claims structure
 type Claims struct {
 	UserID int    `json:"user_id"`
 	Email  string `json:"email"`
@@ -58,13 +96,11 @@ func main() {
 		c.Next()
 	})
 
+	// Swagger endpoint
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// Health endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "healthy",
-			"service": "api-service",
-		})
-	})
+	r.GET("/health", healthCheck)
 
 	// Authentication endpoints
 	auth := r.Group("/auth")
@@ -72,18 +108,10 @@ func main() {
 		auth.POST("/login", loginHandler(userServiceURL, jwtSecret))
 	}
 
-	// Protected routes (will add middleware later)
+	// Protected routes
 	api := r.Group("/api")
 	{
-		api.GET("/protected", authMiddleware(jwtSecret), func(c *gin.Context) {
-			userID, _ := c.Get("user_id")
-			email, _ := c.Get("email")
-			c.JSON(200, gin.H{
-				"message": "This is a protected endpoint",
-				"user_id": userID,
-				"email":   email,
-			})
-		})
+		api.GET("/protected", authMiddleware(jwtSecret), protectedEndpoint)
 	}
 
 	log.Printf("API service starting on port %s", port)
@@ -212,6 +240,76 @@ func authMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 	}
+}
+
+// HealthResponse defines the response structure for health checks
+type HealthResponse struct {
+	Status  string `json:"status" example:"healthy"`
+	Service string `json:"service" example:"api-service"`
+}
+
+// ErrorResponse defines the standard error response structure
+type ErrorResponse struct {
+	Error string `json:"error" example:"Invalid request"`
+}
+
+// ProtectedResponse defines the response structure for protected endpoints
+type ProtectedResponse struct {
+	Message string `json:"message" example:"This is a protected endpoint"`
+	UserID  int    `json:"user_id" example:"1"`
+	Email   string `json:"email" example:"user@example.com"`
+}
+
+// healthCheck godoc
+// @Summary      Health Check
+// @Description  Check if the API service is healthy and running
+// @Tags         health
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  HealthResponse
+// @Router       /health [get]
+func healthCheck(c *gin.Context) {
+	c.JSON(200, HealthResponse{
+		Status:  "healthy",
+		Service: "api-service",
+	})
+}
+
+// login godoc
+// @Summary      User Login
+// @Description  Authenticate user with email and password, returns JWT token
+// @Tags         authentication
+// @Accept       json
+// @Produce      json
+// @Param        request  body      LoginRequest   true  "Login credentials"
+// @Success      200      {object}  LoginResponse
+// @Failure      400      {object}  ErrorResponse
+// @Failure      401      {object}  ErrorResponse
+// @Failure      500      {object}  ErrorResponse
+// @Router       /auth/login [post]
+func login(c *gin.Context) {
+	// This is handled by loginHandler function
+	// Swagger annotation is here for documentation purposes
+}
+
+// protectedEndpoint godoc
+// @Summary      Protected Endpoint
+// @Description  Access a protected endpoint that requires JWT authentication
+// @Tags         protected
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Success      200  {object}  ProtectedResponse
+// @Failure      401  {object}  ErrorResponse
+// @Router       /api/protected [get]
+func protectedEndpoint(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	email, _ := c.Get("email")
+	c.JSON(200, ProtectedResponse{
+		Message: "This is a protected endpoint",
+		UserID:  userID.(int),
+		Email:   email.(string),
+	})
 }
 
 func getEnv(key, defaultValue string) string {

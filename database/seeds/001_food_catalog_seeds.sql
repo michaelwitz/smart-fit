@@ -22,6 +22,9 @@ INSERT INTO FOOD_CATALOG (food_name, category, serving_units, calories, protein_
 ('Goat Milk', 'Dairy', 'cup', 168, 9.0, 11.0, 10.0, true, false, false, 'Alternative to cow milk'),
 ('A2 Milk', 'Dairy', 'cup', 150, 8.0, 12.0, 8.0, true, false, false, 'A2 protein variant'),
 ('Cow Milk - Regular', 'Dairy', 'cup', 150, 8.0, 12.0, 8.0, false, false, false, 'Standard dairy milk'),
+('Eggs - Large Chicken', 'Dairy', 'item', 70, 6.0, 0.5, 5.0, true, false, false, 'Complete protein source'),
+('Eggs - Duck', 'Dairy', 'item', 130, 9.0, 1.0, 10.0, true, false, false, 'Richer flavor than chicken eggs'),
+('Eggs - Quail', 'Dairy', 'item', 14, 1.2, 0, 1.0, true, false, false, 'Small gourmet eggs'),
 
 -- Vegetables (non-inflammatory)
 ('Broccoli', 'Vegetables', 'cup', 25, 3.0, 5.0, 0, true, false, true, 'High in fiber and vitamins'),

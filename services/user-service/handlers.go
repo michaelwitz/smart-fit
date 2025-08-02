@@ -84,6 +84,59 @@ type VerifyUserResponse struct {
 	User  *User `json:"user,omitempty"`
 }
 
+// Survey-related structs
+type Goal struct {
+	ID          int       `json:"id" db:"id"`
+	Category    string    `json:"category" db:"category"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Goal with selection state for UI
+type GoalWithSelection struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Selected    bool   `json:"selected"`
+}
+
+// Goals grouped by category for UI
+type GoalsByCategory struct {
+	Weight     []GoalWithSelection `json:"weight"`
+	Appearance []GoalWithSelection `json:"appearance"`
+	Strength   []GoalWithSelection `json:"strength"`
+	Endurance  []GoalWithSelection `json:"endurance"`
+}
+
+type Survey struct {
+	ID            int       `json:"id" db:"id"`
+	UserID        int       `json:"userId" db:"user_id"`
+	CurrentWeight float64   `json:"currentWeight" db:"current_weight"`
+	TargetWeight  float64   `json:"targetWeight" db:"target_weight"`
+	ActivityLevel int       `json:"activityLevel" db:"activity_level"`
+	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Optimized survey response with goals grouped by category
+type SurveyWithGoals struct {
+	Survey
+	Goals GoalsByCategory `json:"goals"`
+}
+
+// Response for getting all available goals (for survey creation form)
+type AllGoalsResponse struct {
+	Goals GoalsByCategory `json:"goals"`
+}
+
+type CreateSurveyRequest struct {
+	CurrentWeight float64 `json:"currentWeight"`
+	TargetWeight  float64 `json:"targetWeight"`
+	ActivityLevel int     `json:"activityLevel"`
+	GoalIDs       []int   `json:"goalIds"`
+}
+
 func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT id, full_name, email, phone_number, identify_as, city, 
@@ -553,4 +606,291 @@ func (s *Server) verifyUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(VerifyUserResponse{Valid: true, User: &user})
+}
+
+// Survey handlers
+func (s *Server) createSurvey(w http.ResponseWriter, r *http.Request) {
+	// Extract user ID from URL path
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) != 3 || pathParts[2] != "survey" {
+		http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.Atoi(pathParts[1])
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	var req CreateSurveyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if req.CurrentWeight <= 0 || req.TargetWeight <= 0 {
+		http.Error(w, "currentWeight and targetWeight must be positive", http.StatusBadRequest)
+		return
+	}
+	if req.ActivityLevel < 0 || req.ActivityLevel > 10 {
+		http.Error(w, "activityLevel must be between 0 and 10", http.StatusBadRequest)
+		return
+	}
+	if len(req.GoalIDs) == 0 {
+		http.Error(w, "at least one goal must be selected", http.StatusBadRequest)
+		return
+	}
+
+	// Verify user exists
+	var userExists bool
+	err = s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM USERS WHERE id = $1)", userID).Scan(&userExists)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !userExists {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Verify all goals exist
+	for _, goalID := range req.GoalIDs {
+		var goalExists bool
+		err = s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM GOALS WHERE id = $1)", goalID).Scan(&goalExists)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+			return
+		}
+		if !goalExists {
+			http.Error(w, fmt.Sprintf("Goal with ID %d not found", goalID), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Begin transaction
+	tx, err := s.db.Begin()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Transaction error: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	// Insert survey
+	var survey Survey
+	surveyQuery := `
+		INSERT INTO SURVEYS (user_id, current_weight, target_weight, activity_level, created_at)
+		VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+		RETURNING id, user_id, current_weight, target_weight, activity_level, created_at`
+
+	err = tx.QueryRow(surveyQuery, userID, req.CurrentWeight, req.TargetWeight, req.ActivityLevel).Scan(
+		&survey.ID, &survey.UserID, &survey.CurrentWeight, &survey.TargetWeight, &survey.ActivityLevel, &survey.CreatedAt,
+	)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Survey creation error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Insert survey-goal associations
+	for _, goalID := range req.GoalIDs {
+		_, err = tx.Exec(
+			"INSERT INTO USER_SURVEY_GOALS (survey_id, goal_id, created_at) VALUES ($1, $2, CURRENT_TIMESTAMP)",
+			survey.ID, goalID,
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate key") {
+				http.Error(w, "Duplicate goal selected", http.StatusBadRequest)
+				return
+			}
+			http.Error(w, fmt.Sprintf("Goal association error: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		http.Error(w, fmt.Sprintf("Transaction commit error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch the complete survey with goals for response
+	surveyWithGoals := s.getSurveyWithGoals(survey.ID)
+	if surveyWithGoals == nil {
+		http.Error(w, "Failed to fetch created survey", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(surveyWithGoals)
+}
+
+func (s *Server) getLatestSurvey(w http.ResponseWriter, r *http.Request) {
+	// Extract user ID from URL path
+	pathParts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(pathParts) != 4 || pathParts[2] != "survey" || pathParts[3] != "latest" {
+		http.Error(w, "Invalid URL path", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.Atoi(pathParts[1])
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Get the latest survey for the user
+	query := `
+		SELECT id, user_id, current_weight, target_weight, activity_level, created_at
+		FROM SURVEYS
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1`
+
+	var survey Survey
+	err = s.db.QueryRow(query, userID).Scan(
+		&survey.ID, &survey.UserID, &survey.CurrentWeight, &survey.TargetWeight, &survey.ActivityLevel, &survey.CreatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "No surveys found for user", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Get the survey with goals
+	surveyWithGoals := s.getSurveyWithGoals(survey.ID)
+	if surveyWithGoals == nil {
+		http.Error(w, "Failed to fetch survey details", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(surveyWithGoals)
+}
+
+func (s *Server) getAllGoals(w http.ResponseWriter, r *http.Request) {
+	// Get all goals grouped by category
+	goalsByCategory := s.getGoalsByCategory(nil) // nil means no survey ID, so all goals are unselected
+	if goalsByCategory == nil {
+		http.Error(w, "Failed to fetch goals", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(AllGoalsResponse{Goals: *goalsByCategory})
+}
+
+// Helper function to get survey with associated goals grouped by category
+func (s *Server) getSurveyWithGoals(surveyID int) *SurveyWithGoals {
+	// Get survey details
+	var survey Survey
+	squery := `
+		SELECT id, user_id, current_weight, target_weight, activity_level, created_at
+		FROM SURVEYS
+		WHERE id = $1`
+
+	err := s.db.QueryRow(squery, surveyID).Scan(
+		&survey.ID, &survey.UserID, &survey.CurrentWeight, &survey.TargetWeight, &survey.ActivityLevel, &survey.CreatedAt,
+	)
+	if err != nil {
+		return nil
+	}
+
+	// Get goals grouped by category with selection status
+	goalsByCategory := s.getGoalsByCategory(&surveyID)
+	if goalsByCategory == nil {
+		return nil
+	}
+
+	return &SurveyWithGoals{
+		Survey: survey,
+		Goals:  *goalsByCategory,
+	}
+}
+
+// Helper function to get all goals grouped by category with optional selection status
+func (s *Server) getGoalsByCategory(surveyID *int) *GoalsByCategory {
+	// Get all goals
+	query := `
+		SELECT id, category, name, description
+		FROM GOALS
+		ORDER BY category, name`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	// Get selected goal IDs if survey ID is provided
+	selectedGoals := make(map[int]bool)
+	if surveyID != nil {
+		selectedQuery := `
+			SELECT goal_id
+			FROM USER_SURVEY_GOALS
+			WHERE survey_id = $1`
+
+		selectedRows, err := s.db.Query(selectedQuery, *surveyID)
+		if err != nil {
+			return nil
+		}
+		defer selectedRows.Close()
+
+		for selectedRows.Next() {
+			var goalID int
+			err := selectedRows.Scan(&goalID)
+			if err != nil {
+				return nil
+			}
+			selectedGoals[goalID] = true
+		}
+	}
+
+	// Group goals by category
+	goalsByCategory := GoalsByCategory{
+		Weight:     []GoalWithSelection{},
+		Appearance: []GoalWithSelection{},
+		Strength:   []GoalWithSelection{},
+		Endurance:  []GoalWithSelection{},
+	}
+
+	for rows.Next() {
+		var goal struct {
+			ID          int    `db:"id"`
+			Category    string `db:"category"`
+			Name        string `db:"name"`
+			Description string `db:"description"`
+		}
+
+		err := rows.Scan(&goal.ID, &goal.Category, &goal.Name, &goal.Description)
+		if err != nil {
+			return nil
+		}
+
+		goalWithSelection := GoalWithSelection{
+			ID:          goal.ID,
+			Name:        goal.Name,
+			Description: goal.Description,
+			Selected:    selectedGoals[goal.ID],
+		}
+
+		// Add to appropriate category
+		switch strings.ToLower(goal.Category) {
+		case "weight":
+			goalsByCategory.Weight = append(goalsByCategory.Weight, goalWithSelection)
+		case "appearance":
+			goalsByCategory.Appearance = append(goalsByCategory.Appearance, goalWithSelection)
+		case "strength":
+			goalsByCategory.Strength = append(goalsByCategory.Strength, goalWithSelection)
+		case "endurance":
+			goalsByCategory.Endurance = append(goalsByCategory.Endurance, goalWithSelection)
+		}
+	}
+
+	return &goalsByCategory
 }

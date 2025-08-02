@@ -21,14 +21,67 @@ A comprehensive fitness tracking and advice application built with a microservic
 
 ## Tech Stack
 
-- **API Gateway**: Go + Gin framework (authentication, middleware)
-- **Microservices**: Go + standard http package (business logic)
+- **API Gateway**: Go 1.23 + Gin framework (authentication, middleware)
+- **Microservices**: Go 1.23 + standard http package (business logic)
 - **Database**: PostgreSQL + SQLBoiler ORM
 - **Frontend**: React.js + Mantine UI
 - **Containerization**: Docker + Docker Compose
+  - **Build Images**: `golang:1.23-bookworm` (Debian-based for compatibility)
+  - **Runtime Images**: `gcr.io/distroless/static-debian12:nonroot` (security-focused, minimal attack surface)
 - **Fault Tolerance**: failsafe-go library
 - **Communication**: HTTP/REST APIs
+- **Documentation**: Swagger/OpenAPI 3.0 with interactive UI
 - **Analytics**: PostHog (client-side only)
+
+## 🛡️ Security Implementation
+
+This application implements multiple layers of security following industry best practices:
+
+### **Container Security**
+- ✅ **Distroless Runtime Images**: Using `gcr.io/distroless/static-debian12:nonroot`
+  - No shell, package managers, or unnecessary binaries
+  - Minimal attack surface with only essential runtime components
+  - Non-root user execution by default
+- ✅ **Multi-Stage Docker Builds**: Build with full toolchain, deploy with minimal runtime
+- ✅ **Latest Go Version**: Go 1.23 with latest security patches and improvements
+
+### **Authentication & Authorization** 
+- ✅ **JWT Tokens**: Secure, stateless authentication with configurable expiration
+- ✅ **bcrypt Password Hashing**: Industry-standard password encryption (cost factor 10+)
+- ✅ **Bearer Token Authentication**: Standard HTTP Authorization header implementation
+- ✅ **Protected Routes**: Middleware-based route protection with token validation
+
+### **Database Security**
+- ✅ **Parameterized Queries**: All SQL queries use parameters to prevent injection attacks
+- ✅ **Connection Pooling**: Secure database connection management
+- ✅ **Environment-Based Credentials**: Database credentials via environment variables
+- ✅ **PostgreSQL**: Production-grade database with built-in security features
+
+### **Application Security**
+- ✅ **Input Validation**: Request payload validation using Go struct tags
+- ✅ **CORS Configuration**: Controlled cross-origin resource sharing
+- ✅ **Error Handling**: Sanitized error responses (no sensitive data leakage)
+- ✅ **Structured Logging**: Secure logging without credential exposure
+
+### **Infrastructure Security**
+- ✅ **Environment Variable Management**: All secrets via environment variables
+- ✅ **Docker Network Isolation**: Services communicate via isolated Docker network
+- ✅ **Non-Root Container Execution**: All containers run as unprivileged users
+- ✅ **Minimal Dependencies**: Reduced attack surface with essential dependencies only
+
+### **Development Security**
+- ✅ **Gitignored Secrets**: All `.env` files excluded from version control
+- ✅ **Example Templates**: `.env.example` files with placeholder values
+- ✅ **Secret Rotation Ready**: Environment-based configuration supports easy rotation
+- ✅ **Development vs Production**: Clear separation of development and production configs
+
+### **API Security**
+- ✅ **Rate Limiting Ready**: Architecture supports rate limiting implementation
+- ✅ **HTTPS Ready**: TLS termination at load balancer level
+- ✅ **API Documentation Security**: Swagger UI with authentication integration
+- ✅ **Microservices Isolation**: Each service handles specific business logic only
+
+> **Production Recommendation**: Use cloud-native secret management (AWS Secrets Manager, Azure Key Vault, etc.) and implement additional security headers, rate limiting, and monitoring.
 
 ## Quick Start
 
@@ -63,6 +116,7 @@ A comprehensive fitness tracking and advice application built with a microservic
 - **Meal Service**:     `http://localhost:8083`
 - **Tracking Service**: `http://localhost:8084`
 - **Web Client**:       `http://localhost:3000`
+- **API Documentation (Swagger)**: `http://localhost:8080/swagger/index.html` 📖
 
 ### Need Help?
 For any issues, check the service logs or consult the `/docs` directory for more detailed documentation.
@@ -108,6 +162,25 @@ Before running the application, you must configure your environment variables:
 ## API Testing (API-First Development)
 
 We follow an API-first approach where APIs are designed and tested before building UI components.
+
+### 📖 Interactive API Documentation (Swagger)
+
+The API service includes comprehensive Swagger documentation with interactive testing:
+
+- **Swagger UI**: `http://localhost:8080/swagger/index.html`
+- **OpenAPI Spec**: `http://localhost:8080/swagger/doc.json`
+- **Features**: 
+  - Interactive endpoint testing
+  - JWT Bearer token authentication
+  - Request/response examples
+  - OpenAPI 3.0 specification
+
+**Quick Test with Swagger:**
+1. Start services: `make up`
+2. Open Swagger UI: `http://localhost:8080/swagger/index.html`
+3. Test `/auth/login` to get JWT token
+4. Click "Authorize" and enter `Bearer <your-token>`
+5. Test protected endpoints
 
 ### Postman Collections
 - Collections are stored in `/api-tests/collections/`
@@ -222,6 +295,32 @@ curl -X POST http://localhost:8082/users/verify \
   -H "Content-Type: application/json" \
   -d '{"email":"jane@example.com","password":"password123"}'
 
+# Get all available goals (grouped by category)
+curl http://localhost:8082/goals
+
+# Create a fitness survey for user (includes goals selection)
+curl -X POST http://localhost:8082/users/1/survey \
+  -H "Content-Type: application/json" \
+  -d '{
+    "currentWeight": 165.5,
+    "targetWeight": 150.0,
+    "activityLevel": 4,
+    "goalIds": [1, 5, 7, 9]
+  }'
+
+# Get user's latest survey with goals
+curl http://localhost:8082/users/1/survey/latest
+
+# Test user Sophia Woytowitz (from seed data)
+curl -X POST http://localhost:8082/users/1/survey \
+  -H "Content-Type: application/json" \
+  -d '{
+    "currentWeight": 165.5,
+    "targetWeight": 150.0,
+    "activityLevel": 4,
+    "goalIds": [1, 5, 7, 9]
+  }'
+
 # Delete user
 curl -X DELETE http://localhost:8082/users/1
 ```
@@ -250,6 +349,8 @@ export JWT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 curl -H "Authorization: Bearer $JWT_TOKEN" \
   http://localhost:8080/api/users/profile
 ```
+
+**💡 Tip**: Use the interactive [Swagger UI](http://localhost:8080/swagger/index.html) for easier API testing with built-in authentication!
 
 #### Meal Service Examples (when implemented)
 ```bash
@@ -302,13 +403,23 @@ SELECT * FROM USERS;
 - **Internal Communication**: Services communicate via Docker network using service names
 - **External Access**: Use localhost ports for development/testing
 - **Database**: Shared PostgreSQL instance across all services
+- **Container Security**: 
+  - Multi-stage builds with Debian for compatibility during build
+  - Distroless runtime images for minimal attack surface
+  - Non-root user execution for enhanced security
+  - No shell or package managers in production containers
 
 ### Key Features Implementation
 - **Authentication**: JWT tokens with bcrypt password hashing
 - **International Support**: User profiles include `locale`, `postal_code`, `timezone`, `utc_offset`
-- **Security**: Parameterized SQL queries prevent injection attacks
+- **Security**: 
+  - Parameterized SQL queries prevent injection attacks
+  - Distroless container images for minimal attack surface
+  - Non-root container execution
+  - JWT-based authentication with secure token handling
 - **CRUD Operations**: Complete user management with upsert functionality
 - **Service Discovery**: Docker Compose networking for inter-service communication
+- **API Documentation**: Interactive Swagger UI with OpenAPI 3.0 specification
 
 ## Development
 

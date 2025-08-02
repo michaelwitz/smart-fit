@@ -1,10 +1,10 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-bookworm AS builder
 
 WORKDIR /app
 
-# Install git (needed for some Go modules)
-RUN apk add --no-cache git
+# Install git and ca-certificates (needed for some Go modules)
+RUN apt-get update && apt-get install -y git ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -18,19 +18,16 @@ COPY . .
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
-# Final stage
-FROM alpine:latest
+# Final stage - using distroless for security and minimal size
+FROM gcr.io/distroless/static-debian12:nonroot
 
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
+WORKDIR /
 
 # Copy the binary from builder stage
-COPY --from=builder /app/main .
+COPY --from=builder /app/main /main
 
 # Expose port
 EXPOSE 8080
 
-# Run the binary
-CMD ["./main"]
+# Run the binary as non-root user
+CMD ["/main"]

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -41,9 +42,10 @@ func main() {
 	// Routes
 	http.HandleFunc("/health", server.healthHandler)
 	http.HandleFunc("/users", server.usersHandler)
-	http.HandleFunc("/users/", server.userHandler)
 	http.HandleFunc("/users/upsert", server.upsertHandler)
 	http.HandleFunc("/users/verify", server.verifyHandler)
+	http.HandleFunc("/goals", server.goalsHandler)
+	http.HandleFunc("/users/", server.userSurveyHandler) // This will handle both user CRUD and survey routes
 
 	port := getEnv("SERVICE_PORT", "8080")
 	log.Printf("User service starting on port %s", port)
@@ -95,6 +97,54 @@ func (s *Server) verifyHandler(w http.ResponseWriter, r *http.Request) {
 		s.verifyUser(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) goalsHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.getAllGoals(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) userSurveyHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse URL to determine if it's a user or survey endpoint
+	path := strings.Trim(r.URL.Path, "/")
+	pathParts := strings.Split(path, "/")
+	
+	// Handle different URL patterns:
+	// /users/{id} - user CRUD operations
+	// /users/{id}/survey - create survey
+	// /users/{id}/survey/latest - get latest survey
+	
+	if len(pathParts) >= 3 && pathParts[2] == "survey" {
+		// Survey endpoints
+		if len(pathParts) == 3 {
+			// /users/{id}/survey - create survey
+			switch r.Method {
+			case http.MethodPost:
+				s.createSurvey(w, r)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		} else if len(pathParts) == 4 && pathParts[3] == "latest" {
+			// /users/{id}/survey/latest - get latest survey
+			switch r.Method {
+			case http.MethodGet:
+				s.getLatestSurvey(w, r)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		} else {
+			http.Error(w, "Invalid survey endpoint", http.StatusBadRequest)
+		}
+	} else if len(pathParts) == 2 {
+		// User CRUD endpoints: /users/{id}
+		s.userHandler(w, r)
+	} else {
+		http.Error(w, "Invalid endpoint", http.StatusBadRequest)
 	}
 }
 
