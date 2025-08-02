@@ -4,11 +4,11 @@ A comprehensive fitness tracking and advice application built with a microservic
 
 ## Architecture Overview
 
-### Backend Services (Go + Gin)
-- **api-service**: Main API service handling all client requests (web + future mobile)
-- **user-service**: User authentication, registration, profile management, and user data operations
-- **meal-service**: Meal planning, nutrition tracking, and meal data operations
-- **tracking-service**: Daily check-ins, weight, mood, sleep, activity tracking, and tracking data operations
+### Backend Services
+- **api-service**: Main API gateway using Go + Gin (authentication, JWT, middleware, client routing)
+- **user-service**: User registration, profile management, and user data operations (Go + stdlib http)
+- **meal-service**: Meal planning, nutrition tracking, and meal data operations (Go + stdlib http)
+- **tracking-service**: Daily check-ins, weight, mood, sleep, activity tracking (Go + stdlib http)
 
 ### Frontend
 - **web-client**: React.js + Mantine UI library for mobile-first responsive design
@@ -21,13 +21,14 @@ A comprehensive fitness tracking and advice application built with a microservic
 
 ## Tech Stack
 
-- **Backend**: Go + Gin framework
+- **API Gateway**: Go + Gin framework (authentication, middleware)
+- **Microservices**: Go + standard http package (business logic)
 - **Database**: PostgreSQL + SQLBoiler ORM
 - **Frontend**: React.js + Mantine UI
 - **Containerization**: Docker + Docker Compose
 - **Fault Tolerance**: failsafe-go library
 - **Communication**: HTTP/REST APIs
-- **Analytics**: PostHog
+- **Analytics**: PostHog (client-side only)
 
 ## Quick Start
 
