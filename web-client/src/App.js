@@ -30,6 +30,7 @@ function App() {
   const [authModalOpened, setAuthModalOpened] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Check authentication status on component mount
   useEffect(() => {
@@ -52,25 +53,31 @@ function App() {
   }, []);
 
   // Mobile address bar hiding functionality
-  useEffect(() = {
-    const hideAddressBar = () = {
+  useEffect(() => {
+    const hideAddressBar = () => {
       // For mobile Safari - force scroll to hide address bar
-      if (window.navigator.userAgent.includes('Safari')  window.navigator.userAgent.includes('Mobile')) {
+      if (window.navigator.userAgent.includes('Safari') && window.navigator.userAgent.includes('Mobile')) {
         window.scrollTo(0, 1);
-        setTimeout(() = window.scrollTo(0, 0), 100);
+        setTimeout(() => window.scrollTo(0, 0), 100);
       }
     };
 
     // Hide address bar on load
     hideAddressBar();
     
-    // Also hide on orientation change
-    window.addEventListener('orientationchange', hideAddressBar);
-    window.addEventListener('resize', hideAddressBar);
+    // Handle resize for responsive design
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      hideAddressBar();
+    };
     
-    return () = {
-      window.removeEventListener('orientationchange', hideAddressBar);
-      window.removeEventListener('resize', hideAddressBar);
+    // Also hide on orientation change
+    window.addEventListener('orientationchange', handleResize);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('orientationchange', handleResize);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -134,18 +141,28 @@ function App() {
       {/* Video Overlay */}
       <div className="video-overlay" />
 
-      {/* Hamburger Menu - Top Left on Video */}
-      <Box
-        style={{
-          position: 'fixed',
-          top: '20px',
-          left: '20px',
-          zIndex: 10
-        }}
-      >
+      {/* Hamburger Menu - Inline with Title */}
+      <Box className="hamburger-menu">
         <Menu shadow="md" width={250}>
           <Menu.Target>
-            <Burger size="sm" color="white" />
+            <Box
+              style={{
+                padding: '8px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                cursor: 'pointer',
+                minWidth: '44px', // iOS touch target minimum
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Burger 
+              size={isMobile ? 'md' : 'lg'}
+                color="white" 
+              />
+            </Box>
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Label>Navigation</Menu.Label>
@@ -165,12 +182,12 @@ function App() {
         </Menu>
       </Box>
 
-      {/* User Avatar Menu - Top Right on Video */}
+      {/* User Avatar Menu - Aligned with Title */}
       {isAuthenticated && userInfo && (
         <Box
           style={{
             position: 'fixed',
-            top: '20px',
+            top: 'calc(20vh - 20px)', // Align with hamburger menu
             right: '20px',
             zIndex: 10
           }}
@@ -208,6 +225,7 @@ function App() {
       )}
           {/* Title Section - Top 20% */}
           <Box
+            className="title-section"
             style={{
               position: 'fixed',
               top: 0,

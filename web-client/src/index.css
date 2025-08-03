@@ -44,10 +44,29 @@ body {
   z-index: 0;
 }
 
+/* Hamburger menu positioning */
+.hamburger-menu {
+  position: fixed;
+  top: 4vh; /* Higher for desktop to align with title */
+  left: 1.5rem;
+  z-index: 10;
+}
+
 /* Mobile-specific styles for fullscreen behavior */
 @media (max-width: 768px) {
   .main-content {
     padding: 1rem;
+  }
+  
+  /* Mobile hamburger positioning */
+  .hamburger-menu {
+    top: 5vh; /* Higher on mobile */
+    left: 0.5rem; /* More to the left on mobile */
+  }
+  
+  /* Add padding to title section on mobile */
+  .title-section {
+    padding-top: 2vh !important;
   }
   
   /* Force height recalculation to hide address bar on scroll */
