@@ -22,6 +22,18 @@ import {
   IconBarbell
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { 
+  BrowserView, 
+  MobileView, 
+  isBrowser, 
+  isMobile, 
+  isTablet,
+  isIOS,
+  isAndroid,
+  deviceType,
+  browserName,
+  osName
+} from 'react-device-detect';
 import AuthModal from './components/AuthModal';
 import { authUtils } from './utils/auth';
 import { authAPI } from './utils/api';
@@ -30,7 +42,23 @@ function App() {
   const [authModalOpened, setAuthModalOpened] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  // Use react-device-detect for better device detection
+  const isActualMobile = isMobile || isTablet;
+  
+  // Log device info for debugging
+  useEffect(() => {
+    console.log('Device Info:', {
+      deviceType,
+      isMobile,
+      isTablet,
+      isIOS,
+      isAndroid,
+      browserName,
+      osName,
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height
+    });
+  }, []);
 
   // Check authentication status on component mount
   useEffect(() => {
@@ -67,7 +95,6 @@ function App() {
     
     // Handle resize for responsive design
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
       hideAddressBar();
     };
     
@@ -141,181 +168,171 @@ function App() {
       {/* Video Overlay */}
       <div className="video-overlay" />
 
-      {/* Hamburger Menu - Inline with Title */}
-      <Box className="hamburger-menu">
-        <Menu shadow="md" width={250}>
-          <Menu.Target>
-            <Box
-              style={{
-                padding: '8px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                cursor: 'pointer',
-                minWidth: '44px', // iOS touch target minimum
-                minHeight: '44px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Burger 
-              size={isMobile ? 'md' : 'lg'}
-                color="white" 
-              />
-            </Box>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Label>Navigation</Menu.Label>
-            <Menu.Item leftSection={<IconDashboard size={16} />}>
-              Dashboard
-            </Menu.Item>
-            <Menu.Item leftSection={<IconBarbell size={16} />}>
-              Workouts
-            </Menu.Item>
-            <Menu.Item leftSection={<IconCalendar size={16} />}>
-              Schedule
-            </Menu.Item>
-            <Menu.Item leftSection={<IconUser size={16} />}>
-              Profile
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      </Box>
+      {/* Main App Layout using CSS Grid */}
+      <div className="app-layout">
+        {/* Header Section */}
+        <div className="header-section">
+          {/* Hamburger Menu */}
+          <div className="hamburger-menu">
+            <Menu shadow="md" width={250}>
+              <Menu.Target>
+                <Box
+                  style={{
+                    padding: '8px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    cursor: 'pointer',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid rgba(255, 255, 255, 0.3)'
+                  }}
+                >
+                  <Burger 
+                    size={isActualMobile ? 'md' : 'lg'}
+                    color="white" 
+                  />
+                </Box>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label>Navigation</Menu.Label>
+                <Menu.Item leftSection={<IconDashboard size={16} />}>
+                  Dashboard
+                </Menu.Item>
+                <Menu.Item leftSection={<IconBarbell size={16} />}>
+                  Workouts
+                </Menu.Item>
+                <Menu.Item leftSection={<IconCalendar size={16} />}>
+                  Schedule
+                </Menu.Item>
+                <Menu.Item leftSection={<IconUser size={16} />}>
+                  Profile
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </div>
 
-      {/* User Avatar Menu - Aligned with Title */}
-      {isAuthenticated && userInfo && (
-        <Box
-          style={{
-            position: 'fixed',
-            top: 'calc(20vh - 20px)', // Align with hamburger menu
-            right: '20px',
-            zIndex: 10
+          {/* Empty div to maintain grid structure */}
+          <div></div>
+
+          {/* User Menu */}
+          <div className="user-menu">
+            {isAuthenticated && userInfo && (
+              <Menu shadow="md" width={200}>
+                <Menu.Target>
+                  <ActionIcon variant="subtle" size="lg">
+                    <Avatar size="sm" color="pink">
+                      {userInfo.fullName?.charAt(0) || userInfo.email?.charAt(0) || 'U'}
+                    </Avatar>
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label>Account</Menu.Label>
+                  <Menu.Item leftSection={<IconUser size={14} />}>
+                    Profile
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconSettings size={14} />}>
+                    Settings
+                  </Menu.Item>
+                  <Menu.Divider />
+                  <Menu.Item 
+                    leftSection={<IconLogout size={14} />} 
+                    color="red"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content Section */}
+        <div className="main-content">
+          {/* This area can be used for main app content later */}
+        </div>
+
+        {/* Footer Section */}
+        <div className="footer-section">
+          {isAuthenticated ? (
+            <Button
+              size="xl"
+              radius="xl"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                color: '#333',
+                border: 'none',
+                minWidth: '200px',
+                height: '60px',
+                fontSize: '1.2rem',
+                fontWeight: 600,
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+              }}
+              onClick={handleContinue}
+            >
+              Continue
+            </Button>
+          ) : (
+            <Button
+              size="xl"
+              radius="xl"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                color: '#333',
+                border: 'none',
+                minWidth: '200px',
+                height: '60px',
+                fontSize: '1.2rem',
+                fontWeight: 600,
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+              }}
+              onClick={() => setAuthModalOpened(true)}
+            >
+              Sign In / Sign Up
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Title - horizontally centered, mobile safe */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: isActualMobile ? (isIOS ? 'calc(env(safe-area-inset-top) + 80px)' : '80px') : '10%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center',
+          zIndex: 1,
+          pointerEvents: 'none'
+        }}
+      >
+        <Title 
+          order={1} 
+          size={isActualMobile ? (isTablet ? "2.8rem" : "2.3rem") : "3rem"}
+          c="white" 
+          style={{ 
+            fontWeight: 900,
+            textShadow: '2px 2px 4px rgba(0,0,0,0.7)',
+            marginBottom: '0.5rem',
+            whiteSpace: 'nowrap'
           }}
         >
-          <Menu shadow="md" width={200}>
-            <Menu.Target>
-              <ActionIcon variant="subtle" size="lg">
-                <Avatar size="sm" color="pink">
-                  {userInfo.fullName?.charAt(0) || userInfo.email?.charAt(0) || 'U'}
-                </Avatar>
-              </ActionIcon>
-            </Menu.Target>
-
-            <Menu.Dropdown>
-              <Menu.Label>Account</Menu.Label>
-              <Menu.Item leftSection={<IconUser size={14} />}>
-                Profile
-              </Menu.Item>
-              <Menu.Item leftSection={<IconSettings size={14} />}>
-                Settings
-              </Menu.Item>
-              
-              <Menu.Divider />
-              
-              <Menu.Item 
-                leftSection={<IconLogout size={14} />} 
-                color="red"
-                onClick={handleLogout}
-              >
-                Logout
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Box>
-      )}
-          {/* Title Section - Top 20% */}
-          <Box
-            className="title-section"
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '20vh',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              textAlign: 'center',
-              zIndex: 1
-            }}
-          >
-            <Title 
-              order={1} 
-              size="3rem"
-              c="white" 
-              style={{ 
-                fontWeight: 900,
-                textShadow: '2px 2px 4px rgba(0,0,0,0.7)',
-                marginBottom: '1rem'
-              }}
-            >
-              Smart Fit Girl
-            </Title>
-            
-            <Text 
-              size="xl" 
-              c="white" 
-              style={{ 
-                textShadow: '1px 1px 2px rgba(0,0,0,0.7)'
-              }}
-            >
-              Your personal fitness journey starts here
-            </Text>
-          </Box>
-
-          {/* Button Section - Bottom 20% */}
-          <Box
-            style={{
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '20vh',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 1
-            }}
-          >
-            {isAuthenticated ? (
-              <Button
-                size="xl"
-                radius="xl"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  color: '#333',
-                  border: 'none',
-                  minWidth: '200px',
-                  height: '60px',
-                  fontSize: '1.2rem',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                }}
-                onClick={handleContinue}
-              >
-                Continue
-              </Button>
-            ) : (
-              <Button
-                size="xl"
-                radius="xl"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  color: '#333',
-                  border: 'none',
-                  minWidth: '200px',
-                  height: '60px',
-                  fontSize: '1.2rem',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                }}
-                onClick={() => setAuthModalOpened(true)}
-              >
-                Sign In / Sign Up
-              </Button>
-            )}
-          </Box>
+          Smart Fit Girl
+        </Title>
+        
+        <Text 
+          size={isActualMobile ? (isTablet ? "xl" : "lg") : "xl"}
+          c="white" 
+          style={{ 
+            textShadow: '1px 1px 2px rgba(0,0,0,0.7)'
+          }}
+        >
+          Your personal fitness journey starts here
+        </Text>
+      </div>
 
       <AuthModal
         opened={authModalOpened}

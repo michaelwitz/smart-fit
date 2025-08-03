@@ -11,6 +11,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height for mobile */
   overflow: hidden;
   /* Support safe area for iPhone X and later */
   padding-top: env(safe-area-inset-top);
@@ -21,6 +22,7 @@ body {
 
 #root {
   height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height for mobile */
   width: 100vw;
 }
 
@@ -44,29 +46,75 @@ body {
   z-index: 0;
 }
 
-/* Hamburger menu positioning */
+/* Reactive layout using CSS Grid */
+.app-layout {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height for mobile */
+  width: 100vw;
+}
+
+.header-section {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: clamp(0.5rem, 2vh, 2rem) clamp(0.5rem, 4vw, 2rem);
+  min-height: clamp(60px, 15vh, 120px);
+  gap: 1rem;
+}
+
 .hamburger-menu {
-  position: fixed;
-  top: 4vh; /* Higher for desktop to align with title */
-  left: 1.5rem;
+  justify-self: start;
+  z-index: 10;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title-content {
+  justify-self: center;
+  grid-column: 2;
+  text-align: center;
+}
+
+.user-menu {
+  justify-self: end;
   z-index: 10;
 }
 
-/* Mobile-specific styles for fullscreen behavior */
+.main-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.5rem, 2vh, 1.5rem);
+  min-height: clamp(60px, 10vh, 100px);
+  padding-bottom: max(env(safe-area-inset-bottom), 1.5rem);
+}
+
+/* Mobile-specific adjustments */
 @media (max-width: 768px) {
-  .main-content {
-    padding: 1rem;
+  .header-section {
+    padding: clamp(1rem, 3vh, 2rem) 0.5rem;
+    gap: 0.5rem;
   }
   
-  /* Mobile hamburger positioning */
-  .hamburger-menu {
-    top: 5vh; /* Higher on mobile */
-    left: 0.5rem; /* More to the left on mobile */
-  }
-  
-  /* Add padding to title section on mobile */
-  .title-section {
-    padding-top: 2vh !important;
+  .footer-section {
+    padding: 0.5rem;
+    min-height: 80px;
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    background: transparent;
   }
   
   /* Force height recalculation to hide address bar on scroll */

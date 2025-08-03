@@ -12,6 +12,10 @@ A comprehensive fitness tracking and advice application built with a microservic
 
 ### Frontend
 - **web-client**: React.js + Mantine UI library for mobile-first responsive design
+  - **Mobile Detection**: `react-device-detect` for reliable device type detection
+  - **Responsive Design**: Mobile-first CSS with `100dvh` viewport units and CSS safe-area insets
+  - **Progressive Web App**: iOS Safari meta tags, manifest.json, and fullscreen support
+  - **Touch Optimization**: Enhanced mobile scrolling and address bar hiding for iOS Safari
 
 ### Database
 - PostgreSQL running in Docker container
@@ -24,7 +28,7 @@ A comprehensive fitness tracking and advice application built with a microservic
 - **API Gateway**: Go 1.23 + Gin framework (authentication, middleware)
 - **Microservices**: Go 1.23 + standard http package (business logic)
 - **Database**: PostgreSQL + SQLBoiler ORM
-- **Frontend**: React.js + Mantine UI
+- **Frontend**: React.js + Mantine UI + react-device-detect for mobile-first responsive design
 - **Containerization**: Docker + Docker Compose
   - **Build Images**: `golang:1.23-bookworm` (Debian-based for compatibility)
   - **Runtime Images**: `gcr.io/distroless/static-debian12:nonroot` (security-focused, minimal attack surface)

@@ -4,15 +4,16 @@
   "private": true,
   "dependencies": {
     "@mantine/core": "^7.3.2",
-    "@mantine/hooks": "^7.3.2",
     "@mantine/form": "^7.3.2",
+    "@mantine/hooks": "^7.3.2",
     "@mantine/notifications": "^7.3.2",
     "@tabler/icons-react": "^2.47.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
+    "axios": "^1.6.2",
     "jwt-decode": "^4.0.0",
-    "axios": "^1.6.2"
+    "react": "^18.2.0",
+    "react-device-detect": "^2.2.3",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
