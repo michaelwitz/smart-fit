@@ -1,0 +1,13 @@
+{
+  "short_name": "Smart Fit Girl",
+  "name": "Smart Fit Girl - Fitness Tracking App",
+  "description": "Your personal fitness journey starts here",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["health", "fitness", "lifestyle"]
+}

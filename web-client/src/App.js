@@ -51,6 +51,29 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Mobile address bar hiding functionality
+  useEffect(() = {
+    const hideAddressBar = () = {
+      // For mobile Safari - force scroll to hide address bar
+      if (window.navigator.userAgent.includes('Safari')  window.navigator.userAgent.includes('Mobile')) {
+        window.scrollTo(0, 1);
+        setTimeout(() = window.scrollTo(0, 0), 100);
+      }
+    };
+
+    // Hide address bar on load
+    hideAddressBar();
+    
+    // Also hide on orientation change
+    window.addEventListener('orientationchange', hideAddressBar);
+    window.addEventListener('resize', hideAddressBar);
+    
+    return () = {
+      window.removeEventListener('orientationchange', hideAddressBar);
+      window.removeEventListener('resize', hideAddressBar);
+    };
+  }, []);
+
   const handleAuthSuccess = () => {
     setIsAuthenticated(true);
     const user = authUtils.getUserInfo();
