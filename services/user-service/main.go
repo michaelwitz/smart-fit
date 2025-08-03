@@ -44,6 +44,8 @@ func main() {
 	http.HandleFunc("/users", server.usersHandler)
 	http.HandleFunc("/users/upsert", server.upsertHandler)
 	http.HandleFunc("/users/verify", server.verifyHandler)
+	http.HandleFunc("/auth/forgot-password", server.forgotPasswordHandler)
+	http.HandleFunc("/auth/reset-password", server.resetPasswordHandler)
 	http.HandleFunc("/goals", server.goalsHandler)
 	http.HandleFunc("/users/", server.userSurveyHandler) // This will handle both user CRUD and survey routes
 
@@ -95,6 +97,24 @@ func (s *Server) verifyHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		s.verifyUser(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		s.forgotPassword(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		s.resetPassword(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

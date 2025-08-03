@@ -92,7 +92,7 @@ services:
       dockerfile: Dockerfile
     container_name: smart-fit-web-client
     ports:
-      - "${WEB_CLIENT_HOST_PORT:-3000}:3000"
+      - "${WEB_CLIENT_HOST_PORT:-5050}:5050"
     env_file:
       - .env
     depends_on:

@@ -1,33 +1,39 @@
 package main
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID            int       `json:"id" db:"id"`
-	FullName      string    `json:"fullName" db:"full_name"`
-	Email         string    `json:"email" db:"email"`
-	Password      string    `json:"password,omitempty" db:"password"` // omitempty for security
-	PhoneNumber   *string   `json:"phoneNumber" db:"phone_number"`
-	IdentifyAs    *string   `json:"identifyAs" db:"identify_as"`
-	City          *string   `json:"city" db:"city"`
-	StateProvince *string   `json:"stateProvince" db:"state_province"`
-	PostalCode    *string   `json:"postalCode" db:"postal_code"`
-	CountryCode   *string   `json:"countryCode" db:"country_code"`
-	Locale        *string   `json:"locale" db:"locale"`
-	Timezone      *string   `json:"timezone" db:"timezone"`
-	UtcOffset     *int      `json:"utcOffset" db:"utc_offset"`
-	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
+	ID            int        `json:"id" db:"id"`
+	FullName      string     `json:"fullName" db:"full_name"`
+	Email         string     `json:"email" db:"email"`
+	Password      string     `json:"password,omitempty" db:"password"` // omitempty for security
+	PhoneNumber   *string    `json:"phoneNumber" db:"phone_number"`
+	IdentifyAs    *string    `json:"identifyAs" db:"identify_as"`
+	City          *string    `json:"city" db:"city"`
+	StateProvince *string    `json:"stateProvince" db:"state_province"`
+	PostalCode    *string    `json:"postalCode" db:"postal_code"`
+	CountryCode   *string    `json:"countryCode" db:"country_code"`
+	Locale        *string    `json:"locale" db:"locale"`
+	Timezone      *string    `json:"timezone" db:"timezone"`
+	UtcOffset     *int       `json:"utcOffset" db:"utc_offset"`
+	LastActive    *time.Time `json:"lastActive" db:"last_active"`
+	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt     time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 type CreateUserRequest struct {
@@ -84,6 +90,24 @@ type VerifyUserResponse struct {
 	User  *User `json:"user,omitempty"`
 }
 
+// Password reset structs
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+type ForgotPasswordResponse struct {
+	Message string `json:"message"`
+}
+
+type ResetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"newPassword"`
+}
+
+type ResetPasswordResponse struct {
+	Message string `json:"message"`
+}
+
 // Survey-related structs
 type Goal struct {
 	ID          int       `json:"id" db:"id"`
@@ -135,6 +159,98 @@ type CreateSurveyRequest struct {
 	TargetWeight  float64 `json:"targetWeight"`
 	ActivityLevel int     `json:"activityLevel"`
 	GoalIDs       []int   `json:"goalIds"`
+}
+
+func (s *Server) forgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Validate email
+	if req.Email == "" {
+		http.Error(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	// Generate a password reset token
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		http.Error(w, "Failed to generate reset token", http.StatusInternalServerError)
+		return
+	}
+	resetToken := hex.EncodeToString(b)
+
+	// Store the token in the database with an expiration date
+	expiration := time.Now().Add(1 * time.Hour)
+	query := "INSERT INTO PASSWORD_RESETS (email, token, expires_at) VALUES ($1, $2, $3)"
+	_, err := s.db.Exec(query, req.Email, resetToken, expiration)
+	if err != nil {
+		http.Error(w, "Error saving reset token", http.StatusInternalServerError)
+		return
+	}
+
+	// Send the password reset email
+	from := mail.NewEmail("Example App", "no-reply@example.com")
+	subject := "Password Reset Request"
+	to := mail.NewEmail("User", req.Email)
+	plainTextContent := "Please use this token to reset your password: " + resetToken
+	htmlContent := "<strong>Please use this token to reset your password: </strong>" + resetToken
+	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
+	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
+	response, err := client.Send(message)
+	if err != nil || response.StatusCode >= 400 {
+		http.Error(w, "Failed to send reset email", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with success message
+	resp := ForgotPasswordResponse{Message: "Password reset token sent to email."}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (s *Server) resetPassword(w http.ResponseWriter, r *http.Request) {
+	var req ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Validate input
+	if req.Token == "" || req.NewPassword == "" {
+		http.Error(w, "Token and new password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the token and get the associated email
+	var email string
+	query := "SELECT email FROM PASSWORD_RESETS WHERE token = $1 AND expires_at > $2"
+	if err := s.db.QueryRow(query, req.Token, time.Now()).Scan(&email); err != nil {
+		http.Error(w, "Invalid or expired token", http.StatusBadRequest)
+		return
+	}
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Failed to hash new password", http.StatusInternalServerError)
+		return
+	}
+
+	// Update the user's password in the database
+	updateQuery := "UPDATE USERS SET password = $2 WHERE email = $1"
+	_, err = s.db.Exec(updateQuery, email, string(hashedPassword))
+	if err != nil {
+		http.Error(w, "Error updating password", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with success message
+	resp := ResetPasswordResponse{Message: "Password reset successful."}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -601,7 +717,8 @@ func (s *Server) verifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Password matches - return valid with user data (excluding password)
+	// Password matches - update user activity and return valid with user data (excluding password)
+	s.updateUserActivity(user.ID) // Track user login activity
 	user.Password = "" // Clear password field for security
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -893,4 +1010,18 @@ func (s *Server) getGoalsByCategory(surveyID *int) *GoalsByCategory {
 	}
 
 	return &goalsByCategory
+}
+
+// updateUserActivity updates the user's last_active field with 1-hour debouncing
+// Only updates if the current last_active is more than 1 hour old or null
+func (s *Server) updateUserActivity(userID int) {
+	query := `
+		UPDATE USERS 
+		SET last_active = CURRENT_TIMESTAMP
+		WHERE id = $1 
+		  AND (last_active IS NULL OR last_active < (CURRENT_TIMESTAMP - INTERVAL '1 hour'))`
+	
+	// Execute the update - we don't need to check if rows were affected
+	// as the debouncing logic is handled by the WHERE clause
+	s.db.Exec(query, userID)
 }

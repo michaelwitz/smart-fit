@@ -115,7 +115,7 @@ This application implements multiple layers of security following industry best 
 - **User Service**:     `http://localhost:8082`
 - **Meal Service**:     `http://localhost:8083`
 - **Tracking Service**: `http://localhost:8084`
-- **Web Client**:       `http://localhost:3000`
+- **Web Client**:       `http://localhost:5050`
 - **API Documentation (Swagger)**: `http://localhost:8080/swagger/index.html` 📖
 
 ### Need Help?
@@ -143,6 +143,9 @@ Before running the application, you must configure your environment variables:
    # JWT Configuration
    JWT_SECRET=your-super-secret-jwt-key
    
+   # SendGrid Email Service (for password reset functionality)
+   SENDGRID_API_KEY=your-sendgrid-api-key
+   
    # PostHog Analytics (for React client)
    REACT_APP_POSTHOG_KEY=your-posthog-api-key
    REACT_APP_POSTHOG_HOST=https://app.posthog.com
@@ -153,11 +156,58 @@ Before running the application, you must configure your environment variables:
 - **`.env.example`** - Template with placeholder values
 - **`services/*//.env.example`** - Service-specific templates
 
+### SendGrid Email Service Setup
+
+The application uses SendGrid for sending password reset emails. To configure:
+
+1. **Create a SendGrid account** at [sendgrid.com](https://sendgrid.com)
+
+2. **Generate an API Key**:
+   - Go to Settings → API Keys in your SendGrid dashboard
+   - Click "Create API Key"
+   - Choose "Restricted Access" for security
+   - Grant the following permissions:
+     - Mail Send: Full Access
+   - Copy the generated API key
+
+3. **Update your `.env` file**:
+   ```bash
+   SENDGRID_API_KEY=SG.your-actual-api-key-here
+   ```
+
+4. **Verify Sender Identity** (Required for production):
+   - Go to Settings → Sender Authentication
+   - Either verify a single sender email or authenticate your domain
+   - For development, you can use the single sender verification
+
+5. **Update Email Templates** (Optional):
+   - The current implementation uses basic HTML templates
+   - You can customize the email content in `services/user-service/handlers.go`
+   - For production, consider using SendGrid's Dynamic Templates
+
+**Testing Password Reset**:
+```bash
+# Request password reset
+curl -X POST http://localhost:8082/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com"}'
+
+# Reset password with token (check your email for the token)
+curl -X POST http://localhost:8082/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token":"your-reset-token-from-email",
+    "newPassword":"newpassword123"
+  }'
+```
+
 ### Security Notes
 - ✅ Environment files are gitignored for security
 - ✅ Never commit actual credentials to version control
 - ✅ Use cloud secrets management in production
 - ✅ PostHog is only configured client-side for simplicity
+- ✅ SendGrid API keys should be rotated regularly
+- ✅ Password reset tokens expire after 1 hour for security
 
 ## API Testing (API-First Development)
 
@@ -220,7 +270,7 @@ When running locally with `docker-compose`, services are accessible on these por
 | **User Service** | 8080 | 8082 | http://localhost:8082 |
 | **Meal Service** | 8080 | 8083 | http://localhost:8083 |
 | **Tracking Service** | 8080 | 8084 | http://localhost:8084 |
-| **Web Client** (React) | 3000 | 3000 | http://localhost:3000 |
+| **Web Client** (React) | 3000 | 5050 | http://localhost:5050 |
 | **PostgreSQL** | 5432 | 5432 | localhost:5432 |
 
 > **Note**: These ports are for local development only. Production/cloud deployments will use different port configurations.
@@ -395,6 +445,12 @@ psql -h localhost -p 5432 -U smartfit -d smartfitgirl
 
 # View users table
 SELECT * FROM USERS;
+
+# Create password reset table (if not already created)
+\i services/user-service/password_resets_table.sql
+
+# View password reset tokens
+SELECT * FROM PASSWORD_RESETS;
 ```
 
 ### Service Architecture Notes
