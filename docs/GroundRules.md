@@ -41,6 +41,24 @@ When adding columns or changing table structure:
 4. **Reload seed data**: Insert updated sample data
 5. **Restore constraints**: Add back foreign keys and constraints
 
+## Database Schema Management Philosophy
+**Development Phase (Current)**: 
+- **No migration files** - We recreate and reseed the database on schema changes
+- **Single source of truth**: `database/schemas/complete_database_schema.sql` contains the full schema
+- **Seed data**: `database/seeds/` contains all initial data
+- **Benefits**: Simpler development, no schema drift, consistent state across environments
+
+**Production Phase (Future)**:
+- Migration files will be introduced when we need to preserve production data
+- Schema evolution tracking will become necessary
+- Rollback capabilities will be implemented
+
+**Current Setup Process**:
+1. Drop and recreate database container
+2. Run complete schema file
+3. Load all seed data
+4. Verify schema matches application expectations
+
 ## Testing Approach
 - **Unit Tests**: 
   - Use `stretchr/testify` for assertions

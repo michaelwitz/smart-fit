@@ -13,7 +13,7 @@ services:
       - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/migrations:/docker-entrypoint-initdb.d
+      - ./database/schemas:/docker-entrypoint-initdb.d
     networks:
       - smart-fit-network
 
