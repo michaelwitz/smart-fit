@@ -51,14 +51,31 @@ services:
     networks:
       - smart-fit-network
 
-  # Tracking Service
-  tracking-service:
+  # Check-in Service
+  check-in-service:
     build:
-      context: ./services/tracking-service
+      context: ./services/check-in-service
       dockerfile: Dockerfile
-    container_name: smart-fit-tracking-service
+    container_name: smart-fit-check-in-service
     ports:
-      - "${TRACKING_SERVICE_HOST_PORT:-8084}:8080"
+      - "${CHECK_IN_SERVICE_HOST_PORT:-8084}:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres  # Override for Docker network
+    depends_on:
+      - postgres
+    networks:
+      - smart-fit-network
+
+  # Survey Service
+  survey-service:
+    build:
+      context: ./services/survey-service
+      dockerfile: Dockerfile
+    container_name: smart-fit-survey-service
+    ports:
+      - "${SURVEY_SERVICE_HOST_PORT:-8085}:8080"
     env_file:
       - .env
     environment:
@@ -81,7 +98,8 @@ services:
     depends_on:
       - user-service
       - meal-service
-      - tracking-service
+      - check-in-service
+      - survey-service
     networks:
       - smart-fit-network
 
