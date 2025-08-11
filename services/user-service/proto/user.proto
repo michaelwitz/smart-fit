@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "proto/user";
+
+// User service gRPC definitions for user-service
+service UserService {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc GetUserByID(GetUserByIDRequest) returns (GetUserByIDResponse);
+  rpc GetAllUsers(GetAllUsersRequest) returns (GetAllUsersResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+  rpc VerifyUser(VerifyUserRequest) returns (VerifyUserResponse);
+  rpc UpsertUser(UpsertUserRequest) returns (UpsertUserResponse);
+}
+
+// User data structure
+message User {
+  int32 id = 1;
+  string fullName = 10;
+  string email = 20;
+  string phoneNumber = 30;
+  string sex = 40;
+  string city = 50;
+  string stateProvince = 60;
+  string postalCode = 70;
+  string countryCode = 80;
+  string locale = 90;
+  string timezone = 100;
+  int32 utcOffset = 110;
+  google.protobuf.Timestamp lastActive = 120;
+  google.protobuf.Timestamp createdAt = 130;
+  google.protobuf.Timestamp updatedAt = 140;
+}
+
+// Request/Response messages
+message CreateUserRequest {
+  string fullName = 10;
+  string email = 20;
+  string password = 30;
+  string phoneNumber = 40;
+  string sex = 50;
+  string city = 60;
+  string stateProvince = 70;
+  string postalCode = 80;
+  string countryCode = 90;
+  string locale = 100;
+  string timezone = 110;
+  int32 utcOffset = 120;
+}
+
+message CreateUserResponse {
+  User user = 1;
+  string error = 2;
+}
+
+message GetUserByIDRequest {
+  int32 id = 1;
+}
+
+message GetUserByIDResponse {
+  User user = 1;
+  string error = 2;
+}
+
+message GetAllUsersRequest {}
+
+message GetAllUsersResponse {
+  repeated User users = 1;
+  string error = 2;
+}
+
+message UpdateUserRequest {
+  int32 id = 1;
+  string fullName = 10;
+  string password = 20;
+  string phoneNumber = 30;
+  string sex = 40;
+  string city = 50;
+  string stateProvince = 60;
+  string postalCode = 70;
+  string countryCode = 80;
+  string locale = 90;
+  string timezone = 100;
+  int32 utcOffset = 110;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+  string error = 2;
+}
+
+message DeleteUserRequest {
+  int32 id = 1;
+}
+
+message DeleteUserResponse {
+  string message = 1;
+  string error = 2;
+}
+
+message VerifyUserRequest {
+  string email = 10;
+  string password = 20;
+}
+
+message VerifyUserResponse {
+  bool valid = 1;
+  User user = 2;
+  string error = 3;
+}
+
+message UpsertUserRequest {
+  string fullName = 10;
+  string email = 20;
+  string password = 30;
+  string phoneNumber = 40;
+  string sex = 50;
+  string city = 60;
+  string stateProvince = 70;
+  string postalCode = 80;
+  string countryCode = 90;
+  string locale = 100;
+  string timezone = 110;
+  int32 utcOffset = 120;
+}
+
+message UpsertUserResponse {
+  User user = 1;
+  string error = 2;
+}

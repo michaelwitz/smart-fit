@@ -85,6 +85,23 @@ services:
     networks:
       - smart-fit-network
 
+  # DB Gateway Service
+  db-gateway-service:
+    build:
+      context: ./services/db-gateway-service
+      dockerfile: Dockerfile
+    container_name: smart-fit-db-gateway-service
+    ports:
+      - "${DB_GATEWAY_SERVICE_HOST_PORT:-8086}:8086"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres  # Override for Docker network
+    depends_on:
+      - postgres
+    networks:
+      - smart-fit-network
+
   # API Service (Main API Gateway)
   api-service:
     build:
