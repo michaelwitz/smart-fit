@@ -1,32 +1,33 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
+
 	_ "github.com/lib/pq"
 )
 
 type Server struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
 func main() {
 	// Database connection
-	dbHost := getEnv("DB_HOST", "localhost")
-	dbPort := getEnv("DB_PORT", "5432")
-	dbName := getEnv("DB_NAME", "smartfitgirl")
-	dbUser := getEnv("DB_USER", "smartfit")
-	dbPassword := getEnv("DB_PASSWORD", "smartfit123")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbName := os.Getenv("DB_NAME")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -49,7 +50,7 @@ func main() {
 	http.HandleFunc("/goals", server.goalsHandler)
 	http.HandleFunc("/users/", server.userSurveyHandler) // This will handle both user CRUD and survey routes
 
-	port := getEnv("SERVICE_PORT", "8080")
+	port := os.Getenv("SERVICE_PORT")
 	log.Printf("User service starting on port %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
@@ -133,12 +134,12 @@ func (s *Server) userSurveyHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse URL to determine if it's a user or survey endpoint
 	path := strings.Trim(r.URL.Path, "/")
 	pathParts := strings.Split(path, "/")
-	
+
 	// Handle different URL patterns:
 	// /users/{id} - user CRUD operations
 	// /users/{id}/survey - create survey
 	// /users/{id}/survey/latest - get latest survey
-	
+
 	if len(pathParts) >= 3 && pathParts[2] == "survey" {
 		// Survey endpoints
 		if len(pathParts) == 3 {
@@ -166,11 +167,4 @@ func (s *Server) userSurveyHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "Invalid endpoint", http.StatusBadRequest)
 	}
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }

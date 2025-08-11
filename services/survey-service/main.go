@@ -1,11 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/jmoiron/sqlx"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -13,16 +14,16 @@ import (
 
 func main() {
 	// Database connection
-	dbHost := getEnv("DB_HOST", "localhost")
-	dbPort := getEnv("DB_PORT", "5432")
-	dbUser := getEnv("DB_USER", "smartfit")
-	dbPassword := getEnv("DB_PASSWORD", "smartfit123")
-	dbName := getEnv("DB_NAME", "smartfitgirl")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
-	db, err := sql.Open("postgres", connStr)
+	db, err := sqlx.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("Error connecting to database:", err)
 	}
@@ -59,83 +60,76 @@ func main() {
 	r.HandleFunc("/goals/{id}", handleDeleteGoal(db)).Methods("DELETE")
 
 	// Start server
-	port := getEnv("PORT", "8080")
+	port := os.Getenv("PORT")
 	log.Printf("Survey service starting on port %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
 // Handler functions (to be implemented)
-func handleGetSurveys(db *sql.DB) http.HandlerFunc {
+func handleGetSurveys(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Get surveys endpoint"))
 	}
 }
 
-func handleCreateSurvey(db *sql.DB) http.HandlerFunc {
+func handleCreateSurvey(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Create survey endpoint"))
 	}
 }
 
-func handleGetSurvey(db *sql.DB) http.HandlerFunc {
+func handleGetSurvey(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Get survey by ID endpoint"))
 	}
 }
 
-func handleUpdateSurvey(db *sql.DB) http.HandlerFunc {
+func handleUpdateSurvey(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Update survey endpoint"))
 	}
 }
 
-func handleDeleteSurvey(db *sql.DB) http.HandlerFunc {
+func handleDeleteSurvey(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Delete survey endpoint"))
 	}
 }
 
-func handleGetGoals(db *sql.DB) http.HandlerFunc {
+func handleGetGoals(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Get goals endpoint"))
 	}
 }
 
-func handleCreateGoal(db *sql.DB) http.HandlerFunc {
+func handleCreateGoal(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Create goal endpoint"))
 	}
 }
 
-func handleGetGoal(db *sql.DB) http.HandlerFunc {
+func handleGetGoal(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Get goal by ID endpoint"))
 	}
 }
 
-func handleUpdateGoal(db *sql.DB) http.HandlerFunc {
+func handleUpdateGoal(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Update goal endpoint"))
 	}
 }
 
-func handleDeleteGoal(db *sql.DB) http.HandlerFunc {
+func handleDeleteGoal(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Delete goal endpoint"))

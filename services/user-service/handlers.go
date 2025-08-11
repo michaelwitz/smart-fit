@@ -260,27 +260,11 @@ func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 		FROM USERS 
 		ORDER BY created_at DESC`
 
-	rows, err := s.db.Query(query)
+	var users []User
+	err := s.db.Select(&users, query)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 		return
-	}
-	defer rows.Close()
-
-	var users []User
-	for rows.Next() {
-		var user User
-		err := rows.Scan(
-			&user.ID, &user.FullName, &user.Email, &user.PhoneNumber,
-			&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
-			&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset, 
-			&user.CreatedAt, &user.UpdatedAt,
-		)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Scan error: %v", err), http.StatusInternalServerError)
-			return
-		}
-		users = append(users, user)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -308,12 +292,7 @@ func (s *Server) getUserByID(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1`
 
 	var user User
-	err = s.db.QueryRow(query, id).Scan(
-		&user.ID, &user.FullName, &user.Email, &user.PhoneNumber,
-		&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
-		&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset,
-		&user.CreatedAt, &user.UpdatedAt,
-	)
+	err = s.db.Get(&user, query, id)
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "User not found", http.StatusNotFound)
@@ -687,13 +666,7 @@ func (s *Server) verifyUser(w http.ResponseWriter, r *http.Request) {
 		WHERE email = $1`
 
 	var user User
-	var storedPassword string
-	err := s.db.QueryRow(query, req.Email).Scan(
-		&user.ID, &user.FullName, &user.Email, &storedPassword, &user.PhoneNumber,
-		&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
-		&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset, 
-		&user.CreatedAt, &user.UpdatedAt,
-	)
+	err := s.db.Get(&user, query, req.Email)
 
 	if err == sql.ErrNoRows {
 		// User not found - return invalid without revealing this
@@ -708,7 +681,7 @@ func (s *Server) verifyUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify password
-	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(req.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
 		// Password doesn't match - return invalid
 		w.Header().Set("Content-Type", "application/json")
@@ -911,9 +884,7 @@ func (s *Server) getSurveyWithGoals(surveyID int) *SurveyWithGoals {
 		FROM SURVEYS
 		WHERE id = $1`
 
-	err := s.db.QueryRow(squery, surveyID).Scan(
-		&survey.ID, &survey.UserID, &survey.CurrentWeight, &survey.TargetWeight, &survey.ActivityLevel, &survey.CreatedAt,
-	)
+	err := s.db.Get(&survey, squery, surveyID)
 	if err != nil {
 		return nil
 	}
