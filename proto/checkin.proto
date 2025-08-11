@@ -2,7 +2,9 @@ syntax = "proto3";
 
 package checkin;
 
-option go_package = "proto/checkin";
+option go_package = "github.com/michael/smart-fit/proto/checkin";
+
+import "google/protobuf/timestamp.proto";
 
 // Check-in service gRPC definitions
 service CheckInService {
@@ -20,8 +22,8 @@ message CheckIn {
   string check_in_type = 3;
   string notes = 4;
   string location = 5;
-  string created_at = 6;
-  string updated_at = 7;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
 
 // Request/Response messages
