@@ -36,7 +36,7 @@ func NewTestConfig() *TestConfig {
 // TestHealthEndpoint tests the API gateway health check
 func TestHealthEndpoint(t *testing.T) {
 	config := NewTestConfig()
-	
+
 	resp, err := http.Get(config.APIBaseURL + "/health")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
@@ -65,7 +65,7 @@ func TestHealthEndpoint(t *testing.T) {
 // TestLoginEndpoint tests the login endpoint with real test user
 func TestLoginEndpoint(t *testing.T) {
 	config := NewTestConfig()
-	
+
 	// Test with the real test user from seed data
 	loginData := map[string]interface{}{
 		"email":    config.TestUser.Email,
@@ -124,7 +124,7 @@ func TestLoginEndpoint(t *testing.T) {
 // TestProtectedEndpoint tests JWT authentication
 func TestProtectedEndpoint(t *testing.T) {
 	config := NewTestConfig()
-	
+
 	// Test accessing protected endpoint without token
 	resp, err := http.Get(config.APIBaseURL + "/api/protected")
 	if err != nil {
@@ -141,7 +141,7 @@ func TestProtectedEndpoint(t *testing.T) {
 // TestErrorHandling tests API error responses
 func TestErrorHandling(t *testing.T) {
 	config := NewTestConfig()
-	
+
 	// Test invalid JSON
 	resp, err := http.Post(config.APIBaseURL+"/auth/login", "application/json", bytes.NewBuffer([]byte("invalid json")))
 	if err != nil {
@@ -158,7 +158,7 @@ func TestErrorHandling(t *testing.T) {
 // TestInvalidCredentials tests authentication with wrong password
 func TestInvalidCredentials(t *testing.T) {
 	config := NewTestConfig()
-	
+
 	// Test with wrong password for existing user
 	loginData := map[string]interface{}{
 		"email":    config.TestUser.Email,
@@ -185,7 +185,7 @@ func TestInvalidCredentials(t *testing.T) {
 // TestNonExistentUser tests authentication with non-existent user
 func TestNonExistentUser(t *testing.T) {
 	config := NewTestConfig()
-	
+
 	// Test with non-existent user
 	loginData := map[string]interface{}{
 		"email":    "nonexistent@example.com",
@@ -212,7 +212,7 @@ func TestNonExistentUser(t *testing.T) {
 // TestCORSHeaders tests CORS middleware
 func TestCORSHeaders(t *testing.T) {
 	config := NewTestConfig()
-	
+
 	resp, err := http.Get(config.APIBaseURL + "/health")
 	if err != nil {
 		t.Fatalf("Failed to make request: %v", err)
@@ -232,7 +232,7 @@ func TestCORSHeaders(t *testing.T) {
 // TestEndToEndFlow tests the complete authentication flow
 func TestEndToEndFlow(t *testing.T) {
 	config := NewTestConfig()
-	
+
 	// Step 1: Login to get token
 	loginData := map[string]interface{}{
 		"email":    config.TestUser.Email,
