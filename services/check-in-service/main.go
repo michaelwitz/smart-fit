@@ -1,11 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/jmoiron/sqlx"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -13,16 +14,16 @@ import (
 
 func main() {
 	// Database connection
-	dbHost := getEnv("DB_HOST", "localhost")
-	dbPort := getEnv("DB_PORT", "5432")
-	dbUser := getEnv("DB_USER", "smartfit")
-	dbPassword := getEnv("DB_PASSWORD", "smartfit123")
-	dbName := getEnv("DB_NAME", "smartfitgirl")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
-	db, err := sql.Open("postgres", connStr)
+	db, err := sqlx.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("Error connecting to database:", err)
 	}
@@ -52,48 +53,41 @@ func main() {
 	r.HandleFunc("/check-ins/{id}", handleDeleteCheckIn(db)).Methods("DELETE")
 
 	// Start server
-	port := getEnv("PORT", "8080")
+	port := os.Getenv("PORT")
 	log.Printf("Check-in service starting on port %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, r))
 }
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
 // Handler functions (to be implemented)
-func handleGetCheckIns(db *sql.DB) http.HandlerFunc {
+func handleGetCheckIns(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Get check-ins endpoint"))
 	}
 }
 
-func handleCreateCheckIn(db *sql.DB) http.HandlerFunc {
+func handleCreateCheckIn(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Create check-in endpoint"))
 	}
 }
 
-func handleGetCheckIn(db *sql.DB) http.HandlerFunc {
+func handleGetCheckIn(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Get check-in by ID endpoint"))
 	}
 }
 
-func handleUpdateCheckIn(db *sql.DB) http.HandlerFunc {
+func handleUpdateCheckIn(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Update check-in endpoint"))
 	}
 }
 
-func handleDeleteCheckIn(db *sql.DB) http.HandlerFunc {
+func handleDeleteCheckIn(db *sqlx.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Delete check-in endpoint"))
