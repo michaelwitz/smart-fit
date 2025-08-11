@@ -309,7 +309,7 @@ curl -X POST http://localhost:8082/users \
     "email": "jane@example.com",
     "password": "password123",
     "phoneNumber": "+1234567890",
-    "identifyAs": "She/Her",
+    
     "city": "New York",
     "stateProvince": "NY",
     "postalCode": "10001",

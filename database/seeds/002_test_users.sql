@@ -9,7 +9,6 @@ INSERT INTO USERS (
     email, 
     password, 
     phone_number, 
-    identify_as, 
     city, 
     state_province, 
     postal_code, 
@@ -26,7 +25,6 @@ INSERT INTO USERS (
     'sophia.woytowitz@gmail.com',
     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- bcrypt hash of "password"
     NULL,
-    'female',
     'New York',
     'NY',
     NULL,
@@ -43,7 +41,6 @@ INSERT INTO USERS (
     'alex.johnson@example.com',
     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- bcrypt hash of "password"
     '+1-555-0123',
-    'non-binary',
     'San Francisco',
     'CA',
     '94102',
@@ -60,7 +57,6 @@ INSERT INTO USERS (
     'emma.thompson@example.co.uk',
     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- bcrypt hash of "password"
     '+44-20-7946-0958',
-    'female',
     'London',
     'England',
     'SW1A 1AA',

@@ -31,7 +31,7 @@ Stores user profiles with international support:
 - **email**: Login identifier (unique, required, immutable after creation)
 - **password**: Bcrypt hashed password (required)
 - **phone_number**: Optional contact number
-- **identify_as**: Preferred pronouns/identity
+
 - **city**: User's city
 - **state_province**: State or province
 - **postal_code**: Postal/ZIP code for international support

@@ -23,7 +23,6 @@ type User struct {
 	Email         string     `json:"email" db:"email"`
 	Password      string     `json:"password,omitempty" db:"password"` // omitempty for security
 	PhoneNumber   *string    `json:"phoneNumber" db:"phone_number"`
-	IdentifyAs    *string    `json:"identifyAs" db:"identify_as"`
 	City          *string    `json:"city" db:"city"`
 	StateProvince *string    `json:"stateProvince" db:"state_province"`
 	PostalCode    *string    `json:"postalCode" db:"postal_code"`
@@ -41,7 +40,6 @@ type CreateUserRequest struct {
 	Email         string  `json:"email"`
 	Password      string  `json:"password"`
 	PhoneNumber   *string `json:"phoneNumber"`
-	IdentifyAs    *string `json:"identifyAs"`
 	City          *string `json:"city"`
 	StateProvince *string `json:"stateProvince"`
 	PostalCode    *string `json:"postalCode"`
@@ -56,7 +54,6 @@ type UpsertUserRequest struct {
 	Email         string  `json:"email"`
 	Password      *string `json:"password"` // Optional for updates, required for new users
 	PhoneNumber   *string `json:"phoneNumber"`
-	IdentifyAs    *string `json:"identifyAs"`
 	City          *string `json:"city"`
 	StateProvince *string `json:"stateProvince"`
 	PostalCode    *string `json:"postalCode"`
@@ -70,7 +67,6 @@ type UpdateUserRequest struct {
 	FullName      *string `json:"fullName"`
 	Email         *string `json:"email"`
 	PhoneNumber   *string `json:"phoneNumber"`
-	IdentifyAs    *string `json:"identifyAs"`
 	City          *string `json:"city"`
 	StateProvince *string `json:"stateProvince"`
 	PostalCode    *string `json:"postalCode"`
@@ -255,7 +251,7 @@ func (s *Server) resetPassword(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getAllUsers(w http.ResponseWriter, r *http.Request) {
 	query := `
-		SELECT id, full_name, email, phone_number, identify_as, city, 
+		SELECT id, full_name, email, phone_number, city, 
 		       state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at 
 		FROM USERS 
 		ORDER BY created_at DESC`
@@ -286,7 +282,7 @@ func (s *Server) getUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := `
-		SELECT id, full_name, email, phone_number, identify_as, city, 
+		SELECT id, full_name, email, phone_number, city, 
 		       state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at 
 		FROM USERS 
 		WHERE id = $1`
@@ -328,15 +324,15 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := `
-		INSERT INTO USERS (full_name, email, password, phone_number, identify_as, 
+		INSERT INTO USERS (full_name, email, password, phone_number, 
 		                  city, state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		RETURNING id, created_at, updated_at`
 
 	var user User
 	err = s.db.QueryRow(
 		query, req.FullName, req.Email, string(hashedPassword),
-		req.PhoneNumber, req.IdentifyAs, req.City, req.StateProvince,
+		req.PhoneNumber, req.City, req.StateProvince,
 		req.PostalCode, req.CountryCode, req.Locale, req.Timezone, req.UtcOffset,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
@@ -353,7 +349,6 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	user.FullName = req.FullName
 	user.Email = req.Email
 	user.PhoneNumber = req.PhoneNumber
-	user.IdentifyAs = req.IdentifyAs
 	user.City = req.City
 	user.StateProvince = req.StateProvince
 	user.PostalCode = req.PostalCode
@@ -400,15 +395,15 @@ func (s *Server) upsertUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		query := `
-			INSERT INTO USERS (full_name, email, password, phone_number, identify_as, 
+			INSERT INTO USERS (full_name, email, password, phone_number, 
 			                  city, state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 			RETURNING id, created_at, updated_at`
 
 		var user User
 		err = s.db.QueryRow(
 			query, req.FullName, req.Email, string(hashedPassword),
-			req.PhoneNumber, req.IdentifyAs, req.City, req.StateProvince,
+			req.PhoneNumber, req.City, req.StateProvince,
 			req.PostalCode, req.CountryCode, req.Locale, req.Timezone, req.UtcOffset,
 		).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
@@ -421,7 +416,6 @@ func (s *Server) upsertUser(w http.ResponseWriter, r *http.Request) {
 		user.FullName = req.FullName
 		user.Email = req.Email
 		user.PhoneNumber = req.PhoneNumber
-		user.IdentifyAs = req.IdentifyAs
 		user.City = req.City
 		user.StateProvince = req.StateProvince
 		user.PostalCode = req.PostalCode
@@ -454,21 +448,21 @@ func (s *Server) upsertUser(w http.ResponseWriter, r *http.Request) {
 
 		query := `
 			UPDATE USERS 
-			SET full_name = $1, password = $2, phone_number = $3, identify_as = $4, 
-			    city = $5, state_province = $6, postal_code = $7, country_code = $8, locale = $9, timezone = $10, 
-			    utc_offset = $11, updated_at = CURRENT_TIMESTAMP
-			WHERE id = $12
-			RETURNING id, full_name, email, phone_number, identify_as, city, 
+			SET full_name = $1, password = $2, phone_number = $3, 
+			    city = $4, state_province = $5, postal_code = $6, country_code = $7, locale = $8, timezone = $9, 
+			    utc_offset = $10, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $11
+			RETURNING id, full_name, email, phone_number, city, 
 			          state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at`
 
 		var user User
 		err = s.db.QueryRow(
-			query, req.FullName, passwordToUse, req.PhoneNumber, req.IdentifyAs,
+			query, req.FullName, passwordToUse, req.PhoneNumber,
 			req.City, req.StateProvince, req.PostalCode, req.CountryCode, req.Locale, req.Timezone, 
 			req.UtcOffset, existingUserID,
 		).Scan(
 			&user.ID, &user.FullName, &user.Email, &user.PhoneNumber,
-			&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
+			&user.City, &user.StateProvince, &user.PostalCode,
 			&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset, 
 			&user.CreatedAt, &user.UpdatedAt,
 		)
@@ -524,11 +518,7 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 		args = append(args, *req.PhoneNumber)
 		argIndex++
 	}
-	if req.IdentifyAs != nil {
-		setParts = append(setParts, fmt.Sprintf("identify_as = $%d", argIndex))
-		args = append(args, *req.IdentifyAs)
-		argIndex++
-	}
+
 	if req.City != nil {
 		setParts = append(setParts, fmt.Sprintf("city = $%d", argIndex))
 		args = append(args, *req.City)
@@ -578,14 +568,14 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
 		UPDATE USERS 
 		SET %s 
 		WHERE id = $%d
-		RETURNING id, full_name, email, phone_number, identify_as, city, 
+		RETURNING id, full_name, email, phone_number, city, 
 		          state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at`,
 		strings.Join(setParts, ", "), argIndex)
 
 	var user User
 	err = s.db.QueryRow(query, args...).Scan(
 		&user.ID, &user.FullName, &user.Email, &user.PhoneNumber,
-		&user.IdentifyAs, &user.City, &user.StateProvince, &user.PostalCode,
+		&user.City, &user.StateProvince, &user.PostalCode,
 		&user.CountryCode, &user.Locale, &user.Timezone, &user.UtcOffset, 
 		&user.CreatedAt, &user.UpdatedAt,
 	)
@@ -660,7 +650,7 @@ func (s *Server) verifyUser(w http.ResponseWriter, r *http.Request) {
 
 	// Get user from database
 	query := `
-		SELECT id, full_name, email, password, phone_number, identify_as, city, 
+		SELECT id, full_name, email, password, phone_number, city, 
 		       state_province, postal_code, country_code, locale, timezone, utc_offset, created_at, updated_at 
 		FROM USERS 
 		WHERE email = $1`
