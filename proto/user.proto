@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package user;
 
-option go_package = "github.com/michael/smart-fit/proto/user";
+option go_package = "./proto";
 
 import "google/protobuf/timestamp.proto";
 
