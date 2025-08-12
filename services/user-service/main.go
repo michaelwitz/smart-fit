@@ -1,170 +1,124 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
-	"net/http"
+	"net"
 	"os"
-	"strings"
+	"time"
 
-	"github.com/jmoiron/sqlx"
+	"user-service/proto"
 
-	_ "github.com/lib/pq"
+	"github.com/sony/gobreaker"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/reflection"
 )
 
-type Server struct {
-	db *sqlx.DB
+// CircuitBreakerAdapter adapts gobreaker.CircuitBreaker to our interface
+type CircuitBreakerAdapter struct {
+	cb *gobreaker.CircuitBreaker
+}
+
+func (c *CircuitBreakerAdapter) Execute(fn func() (interface{}, error)) (interface{}, error) {
+	return c.cb.Execute(fn)
 }
 
 func main() {
-	// Database connection
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbName := os.Getenv("DB_NAME")
-	dbUser := os.Getenv("DB_USER")
-	dbPassword := os.Getenv("DB_PASSWORD")
+	// Get service configuration
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "8082" // Default gRPC port
+	}
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPassword, dbName)
+	// Get DB Gateway connection address
+	dbGatewayAddr := os.Getenv("DB_GATEWAY_ADDR")
+	if dbGatewayAddr == "" {
+		dbGatewayAddr = "db-gateway-service:8086" // Default address
+	}
 
-	db, err := sqlx.Open("postgres", dsn)
+	// Set up gRPC connection to db-gateway with keepalive
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	dialOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                10 * time.Second, // Send pings every 10 seconds if no activity
+			Timeout:             3 * time.Second,  // Wait 3 seconds for ping acknowledgement
+			PermitWithoutStream: true,              // Send pings even without active streams
+		}),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(10*1024*1024), // 10MB max message size
+			grpc.MaxCallSendMsgSize(10*1024*1024),
+		),
+	}
+
+	conn, err := grpc.DialContext(ctx, dbGatewayAddr, dialOpts...)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect to DB Gateway: %v", err)
 	}
-	defer db.Close()
+	defer conn.Close()
 
-	// Test database connection
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+	// Create gRPC client to db-gateway
+	userClient := proto.NewUserServiceClient(conn)
+
+	// Set up circuit breaker for resilience
+	settings := gobreaker.Settings{
+		Name:        "DBGateway",
+		MaxRequests: 3,                // Number of requests allowed to pass through when half-open
+		Interval:    10 * time.Second, // Time window for failure rate calculation
+		Timeout:     30 * time.Second, // Time before attempting to recover
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			failureRatio := float64(counts.TotalFailures) / float64(counts.Requests)
+			return counts.Requests >= 3 && failureRatio >= 0.6 // Trip if 60% failure rate
+		},
+		OnStateChange: func(name string, from gobreaker.State, to gobreaker.State) {
+			log.Printf("Circuit breaker %s changed from %v to %v", name, from, to)
+		},
 	}
 
-	server := &Server{db: db}
+	cb := gobreaker.NewCircuitBreaker(settings)
+	cbAdapter := &CircuitBreakerAdapter{cb: cb}
 
-	// Routes
-	http.HandleFunc("/health", server.healthHandler)
-	http.HandleFunc("/users", server.usersHandler)
-	http.HandleFunc("/users/upsert", server.upsertHandler)
-	http.HandleFunc("/users/verify", server.verifyHandler)
-	http.HandleFunc("/auth/forgot-password", server.forgotPasswordHandler)
-	http.HandleFunc("/auth/reset-password", server.resetPasswordHandler)
-	http.HandleFunc("/goals", server.goalsHandler)
-	http.HandleFunc("/users/", server.userSurveyHandler) // This will handle both user CRUD and survey routes
+	// Create gRPC server
+	grpcServer := grpc.NewServer(
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    10 * time.Second, // Ping client if no activity for 10 seconds
+			Timeout: 5 * time.Second,  // Wait 5 seconds for ping ack before considering connection dead
+		}),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             5 * time.Second, // Minimum time between client pings
+			PermitWithoutStream: true,             // Allow pings even when there are no active streams
+		}),
+	)
 
-	port := os.Getenv("SERVICE_PORT")
-	log.Printf("User service starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
-}
+	// Register the user service
+	userService := NewGRPCServer(userClient, cbAdapter)
+	proto.RegisterUserServiceServer(grpcServer, userService)
 
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"status": "healthy", "service": "user-service"}`)
-}
+	// Register health service
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("user-service", grpc_health_v1.HealthCheckResponse_SERVING)
 
-func (s *Server) usersHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.getAllUsers(w, r)
-	case http.MethodPost:
-		s.createUser(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// Register reflection service for debugging
+	reflection.Register(grpcServer)
+
+	// Start listening
+	listener, err := net.Listen("tcp", ":"+grpcPort)
+	if err != nil {
+		log.Fatalf("Failed to listen on port %s: %v", grpcPort, err)
 	}
-}
 
-func (s *Server) userHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.getUserByID(w, r)
-	case http.MethodPut:
-		s.updateUser(w, r)
-	case http.MethodDelete:
-		s.deleteUser(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
+	log.Printf("User service gRPC server starting on port %s", grpcPort)
+	log.Printf("Connected to DB Gateway at %s", dbGatewayAddr)
 
-func (s *Server) upsertHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost, http.MethodPut:
-		s.upsertUser(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if err := grpcServer.Serve(listener); err != nil {
+		log.Fatalf("Failed to serve gRPC: %v", err)
 	}
 }
 
-func (s *Server) verifyHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.verifyUser(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.forgotPassword(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.resetPassword(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) goalsHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.getAllGoals(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) userSurveyHandler(w http.ResponseWriter, r *http.Request) {
-	// Parse URL to determine if it's a user or survey endpoint
-	path := strings.Trim(r.URL.Path, "/")
-	pathParts := strings.Split(path, "/")
-
-	// Handle different URL patterns:
-	// /users/{id} - user CRUD operations
-	// /users/{id}/survey - create survey
-	// /users/{id}/survey/latest - get latest survey
-
-	if len(pathParts) >= 3 && pathParts[2] == "survey" {
-		// Survey endpoints
-		if len(pathParts) == 3 {
-			// /users/{id}/survey - create survey
-			switch r.Method {
-			case http.MethodPost:
-				s.createSurvey(w, r)
-			default:
-				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			}
-		} else if len(pathParts) == 4 && pathParts[3] == "latest" {
-			// /users/{id}/survey/latest - get latest survey
-			switch r.Method {
-			case http.MethodGet:
-				s.getLatestSurvey(w, r)
-			default:
-				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			}
-		} else {
-			http.Error(w, "Invalid survey endpoint", http.StatusBadRequest)
-		}
-	} else if len(pathParts) == 2 {
-		// User CRUD endpoints: /users/{id}
-		s.userHandler(w, r)
-	} else {
-		http.Error(w, "Invalid endpoint", http.StatusBadRequest)
-	}
-}

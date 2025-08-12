@@ -45,6 +45,12 @@ db-init:
 	docker-compose up -d postgres
 	@echo "Database initialization complete"
 
+# Generate Go code from proto files
+proto-gen:
+	@echo "Generating Go code from proto files..."
+	protoc --go_out=. --go-grpc_out=. proto/*.proto
+	@echo "Proto generation complete"
+
 # Development helpers
 dev-web-api:
 	cd services/web-api && go run cmd/main.go

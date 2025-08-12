@@ -32,12 +32,9 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
@@ -45,7 +42,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	_ "api-service/docs" // Import generated docs
+	pb "api-service/proto"
 )
 
 // LoginRequest defines the request payload for user authentication
@@ -60,11 +60,6 @@ type LoginResponse struct {
 	User  interface{} `json:"user"`
 }
 
-// UserServiceResponse defines the response from user service verification
-type UserServiceResponse struct {
-	Valid bool        `json:"valid"`
-	User  interface{} `json:"user"`
-}
 
 // Claims defines the JWT token claims structure
 type Claims struct {
@@ -76,7 +71,7 @@ type Claims struct {
 func main() {
 	// Environment variables
 	port := getEnv("SERVICE_PORT", "8080")
-	userServiceURL := getEnv("USER_SERVICE_URL", "http://user-service:8080")
+	userServiceAddr := getEnv("USER_SERVICE_ADDR", "user-service:8082")
 	jwtSecret := getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-in-production")
 
 	// Create Gin router
@@ -105,7 +100,7 @@ func main() {
 	// Authentication endpoints
 	auth := r.Group("/auth")
 	{
-		auth.POST("/login", loginHandler(userServiceURL, jwtSecret))
+		auth.POST("/login", loginHandler(userServiceAddr, jwtSecret))
 	}
 
 	// Protected routes
@@ -115,11 +110,11 @@ func main() {
 	}
 
 	log.Printf("API service starting on port %s", port)
-	log.Printf("User service URL: %s", userServiceURL)
+	log.Printf("User service address: %s", userServiceAddr)
 	r.Run(":" + port)
 }
 
-func loginHandler(userServiceURL, jwtSecret string) gin.HandlerFunc {
+func loginHandler(userServiceAddr, jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req LoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -127,46 +122,45 @@ func loginHandler(userServiceURL, jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		// Call user-service to verify credentials
-		verifyPayload := map[string]string{
-			"email":    req.Email,
-			"password": req.Password,
-		}
-		
-		jsonData, err := json.Marshal(verifyPayload)
+		// Connect to user-service via gRPC
+		conn, err := grpc.Dial(userServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			c.JSON(500, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		resp, err := http.Post(userServiceURL+"/users/verify", "application/json", bytes.NewBuffer(jsonData))
-		if err != nil {
-			log.Printf("Error calling user service: %v", err)
+			log.Printf("Failed to connect to user service: %v", err)
 			c.JSON(500, gin.H{"error": "Authentication service unavailable"})
 			return
 		}
-		defer resp.Body.Close()
+		defer conn.Close()
 
-		body, err := io.ReadAll(resp.Body)
+		client := pb.NewUserServiceClient(conn)
+
+		// Call VerifyUser RPC
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		verifyResp, err := client.VerifyUser(ctx, &pb.VerifyUserRequest{
+			Email:    req.Email,
+			Password: req.Password,
+		})
+
 		if err != nil {
-			c.JSON(500, gin.H{"error": "Internal server error"})
+			log.Printf("Error calling VerifyUser: %v", err)
+			c.JSON(500, gin.H{"error": "Authentication service unavailable"})
 			return
 		}
 
-		var userResp UserServiceResponse
-		if err := json.Unmarshal(body, &userResp); err != nil {
-			c.JSON(500, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		if !userResp.Valid {
+		// Check if user verification failed
+		if !verifyResp.Valid {
 			c.JSON(401, gin.H{"error": "Invalid email or password"})
 			return
 		}
 
 		// Extract user info for JWT claims
-		userMap := userResp.User.(map[string]interface{})
-		userID := int(userMap["id"].(float64))
+		if verifyResp.User == nil {
+			c.JSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		userID := int(verifyResp.User.Id)
 
 		// Generate JWT token
 		token, err := generateJWT(userID, req.Email, jwtSecret)
@@ -175,9 +169,19 @@ func loginHandler(userServiceURL, jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
+		// Convert proto User to JSON-friendly format
+		userResponse := map[string]interface{}{
+			"id":           verifyResp.User.Id,
+			"full_name":    verifyResp.User.FullName,
+			"email":        verifyResp.User.Email,
+			"phone_number": verifyResp.User.PhoneNumber,
+			"city":         verifyResp.User.City,
+			"country_code": verifyResp.User.CountryCode,
+		}
+
 		c.JSON(200, LoginResponse{
 			Token: token,
-			User:  userResp.User,
+			User:  userResponse,
 		})
 	}
 }

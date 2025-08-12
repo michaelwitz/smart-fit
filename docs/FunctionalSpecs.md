@@ -13,6 +13,8 @@ This document consolidates all business logic, nutritional guidelines, and behav
 5. [Nutritional Tracking System](#nutritional-tracking-system)
 6. [Backend Automation & Analytics](#backend-automation--analytics)
 7. [Business Logic & Guidelines](#business-logic--guidelines)
+8. [System Architecture & Security](#system-architecture--security)
+9. [Service Port Assignments](#service-port-assignments)
 
 ---
 
@@ -254,3 +256,133 @@ Stores nutritional details for various foods, specifying quantities per unit of 
 - **Goal Management**: Support setting and tracking custom fitness goals, including nutrient intake, weight management, and exercise targets.
 - **User Sessions**: Maintain user authentication state through JWT tokens with appropriate expiration.
 - **Activity Analytics**: Use debounced activity tracking for user engagement analysis while minimizing database writes.
+
+## System Architecture & Security
+
+### Microservices Architecture
+
+The application follows a microservices architecture with clear service boundaries:
+
+- **API Gateway Service**: Public-facing HTTP API handling authentication and request routing
+- **User Service**: gRPC service managing user authentication and profiles
+- **DB Gateway Service**: gRPC service providing database access layer with security controls
+- **Web Client**: React application for user interface
+
+### Password Security Implementation
+
+#### Security Architecture
+
+1. **Password Flow**:
+   - Client sends plain text password to API Gateway (over HTTPS in production)
+   - API Gateway forwards plain text password to User Service via gRPC
+   - User Service forwards to DB Gateway Service for verification
+   - DB Gateway performs bcrypt comparison with stored hash
+   - Boolean result returned up the service chain
+
+2. **Security Principles**:
+   - **Never hash passwords for inter-service communication** - Hashing is not encryption
+   - **Single responsibility** - Only DB Gateway handles password verification
+   - **Bcrypt hashing** - Industry standard with cost factor 10+
+   - **No password logging** - Plain text passwords never logged
+   - **JWT for sessions** - Passwords not retained after authentication
+
+3. **Network Security**:
+   - Services communicate over Docker internal network (development)
+   - Production requirements:
+     - mTLS for service-to-service authentication
+     - Service mesh (Istio/Linkerd) for automatic TLS
+     - VPC or private networks for service isolation
+
+#### Password Storage & Verification
+
+```go
+// Password Storage (User Creation)
+hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+// Password Verification (DB Gateway Service)
+err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password))
+```
+
+### Authentication & Authorization
+
+- **JWT Tokens**: Stateless authentication with 1-week expiration
+- **Bearer Token**: Standard HTTP Authorization header
+- **Protected Routes**: Middleware-based route protection
+- **Token Validation**: Automatic validation on protected endpoints
+
+### Security Checklist
+
+#### Current Implementation
+- ✅ Bcrypt password hashing before storage
+- ✅ Plain text passwords never logged
+- ✅ Password verification at database service layer
+- ✅ JWT tokens for session management
+- ✅ Constant-time password comparison (bcrypt built-in)
+- ✅ Single-use password reset tokens with 1-hour expiration
+- ✅ SendGrid integration for secure email delivery
+
+#### Production Recommendations
+- [ ] TLS/mTLS for service-to-service communication
+- [ ] Rate limiting for login attempts
+- [ ] Account lockout after failed attempts
+- [ ] Password complexity requirements
+- [ ] Password history to prevent reuse
+- [ ] Two-factor authentication (2FA)
+- [ ] Secrets management service (AWS Secrets Manager, Vault)
+- [ ] Password expiration policies
+- [ ] Audit logging for authentication events
+
+## Service Port Assignments
+
+### Port Assignment Guidelines
+
+1. **Ground Rules**:
+   - Port 8080: Reserved exclusively for the main API Gateway (HTTP)
+   - Ports 8082-8089: Reserved for internal gRPC microservices
+   - Ports 5000-5999: Reserved for web applications and UI
+   - Port 5432: Standard PostgreSQL database port
+   - **Never use port 8080 for internal services**
+
+2. **Current Assignments**:
+
+| Service | Type | Port | Purpose |
+|---------|------|------|----------|
+| **API Gateway** | HTTP REST | 8080 | Main public-facing API |
+| **User Service** | gRPC | 8082 | User authentication & management |
+| **DB Gateway** | gRPC | 8086 | Database access layer |
+| **Web Client** | React | 5050 | Web application UI |
+| **PostgreSQL** | Database | 5432 | Primary database |
+
+3. **Future Service Reservations**:
+
+| Service | Type | Port | Purpose |
+|---------|------|------|----------|
+| **Meal Service** | gRPC | 8083 | Meal planning & nutrition |
+| **Check-in Service** | gRPC | 8084 | Daily check-ins & progress |
+| **Survey Service** | gRPC | 8085 | User surveys & questionnaires |
+| **Notification Service** | gRPC | 8087 | Email/SMS notifications |
+| **Analytics Service** | gRPC | 8088 | Analytics & reporting |
+
+### Service Communication
+
+- **Internal Network**: Docker Compose network for development
+- **Service Discovery**: Services reference each other by container name
+- **gRPC Protocol**: Binary protocol for efficient inter-service communication
+- **HTTP Gateway**: RESTful API for client applications
+
+### Testing & Verification
+
+All authentication tests pass successfully:
+- `TestHealthEndpoint`: Service health checks
+- `TestLoginEndpoint`: User authentication flow
+- `TestProtectedEndpoint`: JWT token validation
+- `TestInvalidCredentials`: Failed authentication handling
+- `TestNonExistentUser`: User not found handling
+- `TestCORSHeaders`: Cross-origin resource sharing
+- `TestEndToEndFlow`: Complete authentication workflow
+
+Run tests with:
+```bash
+cd services/api-service
+go test -v
+```
