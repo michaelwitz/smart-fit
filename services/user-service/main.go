@@ -2,9 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net/http"
+	"net"
 	"os"
 	"time"
 
@@ -13,26 +12,39 @@ import (
 	"github.com/sony/gobreaker"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/reflection"
 )
 
-type Server struct {
-	userClient proto.UserServiceClient
-	cb         *gobreaker.CircuitBreaker
+// CircuitBreakerAdapter adapts gobreaker.CircuitBreaker to our interface
+type CircuitBreakerAdapter struct {
+	cb *gobreaker.CircuitBreaker
+}
+
+func (c *CircuitBreakerAdapter) Execute(fn func() (interface{}, error)) (interface{}, error) {
+	return c.cb.Execute(fn)
 }
 
 func main() {
+	// Get service configuration
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "8082" // Default gRPC port
+	}
+
 	// Get DB Gateway connection address
 	dbGatewayAddr := os.Getenv("DB_GATEWAY_ADDR")
 	if dbGatewayAddr == "" {
 		dbGatewayAddr = "db-gateway-service:8086" // Default address
 	}
 
-	// Set up gRPC connection with connection pooling and keepalive
+	// Set up gRPC connection to db-gateway with keepalive
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	opts := []grpc.DialOption{
+	dialOpts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                10 * time.Second, // Send pings every 10 seconds if no activity
@@ -45,13 +57,13 @@ func main() {
 		),
 	}
 
-	conn, err := grpc.DialContext(ctx, dbGatewayAddr, opts...)
+	conn, err := grpc.DialContext(ctx, dbGatewayAddr, dialOpts...)
 	if err != nil {
 		log.Fatalf("Failed to connect to DB Gateway: %v", err)
 	}
 	defer conn.Close()
 
-	// Create gRPC client
+	// Create gRPC client to db-gateway
 	userClient := proto.NewUserServiceClient(conn)
 
 	// Set up circuit breaker for resilience
@@ -70,89 +82,43 @@ func main() {
 	}
 
 	cb := gobreaker.NewCircuitBreaker(settings)
+	cbAdapter := &CircuitBreakerAdapter{cb: cb}
 
-	server := &Server{
-		userClient: userClient,
-		cb:         cb,
+	// Create gRPC server
+	grpcServer := grpc.NewServer(
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    10 * time.Second, // Ping client if no activity for 10 seconds
+			Timeout: 5 * time.Second,  // Wait 5 seconds for ping ack before considering connection dead
+		}),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             5 * time.Second, // Minimum time between client pings
+			PermitWithoutStream: true,             // Allow pings even when there are no active streams
+		}),
+	)
+
+	// Register the user service
+	userService := NewGRPCServer(userClient, cbAdapter)
+	proto.RegisterUserServiceServer(grpcServer, userService)
+
+	// Register health service
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("user-service", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	// Register reflection service for debugging
+	reflection.Register(grpcServer)
+
+	// Start listening
+	listener, err := net.Listen("tcp", ":"+grpcPort)
+	if err != nil {
+		log.Fatalf("Failed to listen on port %s: %v", grpcPort, err)
 	}
 
-	// Routes
-	http.HandleFunc("/health", server.healthHandler)
-	http.HandleFunc("/users", server.usersHandler)
-	http.HandleFunc("/users/upsert", server.upsertHandler)
-	http.HandleFunc("/users/verify", server.verifyHandler)
-	http.HandleFunc("/auth/forgot-password", server.forgotPasswordHandler)
-	http.HandleFunc("/auth/reset-password", server.resetPasswordHandler)
-	http.HandleFunc("/users/", server.userHandler) // Handles /users/{id} CRUD operations
+	log.Printf("User service gRPC server starting on port %s", grpcPort)
+	log.Printf("Connected to DB Gateway at %s", dbGatewayAddr)
 
-	port := os.Getenv("SERVICE_PORT")
-	log.Printf("User service starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
-}
-
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"status": "healthy", "service": "user-service"}`)
-}
-
-func (s *Server) usersHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.getAllUsers(w, r)
-	case http.MethodPost:
-		s.createUser(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) userHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.getUserByID(w, r)
-	case http.MethodPut:
-		s.updateUser(w, r)
-	case http.MethodDelete:
-		s.deleteUser(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) upsertHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost, http.MethodPut:
-		s.upsertUser(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) verifyHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.verifyUser(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.forgotPassword(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Server) resetPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.resetPassword(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if err := grpcServer.Serve(listener); err != nil {
+		log.Fatalf("Failed to serve gRPC: %v", err)
 	}
 }
 

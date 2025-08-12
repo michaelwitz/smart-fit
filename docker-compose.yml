@@ -24,13 +24,14 @@ services:
       dockerfile: Dockerfile
     container_name: smart-fit-user-service
     ports:
-      - "${USER_SERVICE_HOST_PORT:-8082}:8080"
+      - "${USER_SERVICE_HOST_PORT:-8082}:8082"  # gRPC port
     env_file:
       - .env
     environment:
       - DB_HOST=postgres  # Override for Docker network
+      - GRPC_PORT=8082
     depends_on:
-      - postgres
+      - db-gateway-service
     networks:
       - smart-fit-network
 
@@ -112,6 +113,8 @@ services:
       - "${API_SERVICE_HOST_PORT:-8080}:8080"
     env_file:
       - .env
+    environment:
+      - USER_SERVICE_ADDR=user-service:8082
     depends_on:
       - user-service
       - meal-service
