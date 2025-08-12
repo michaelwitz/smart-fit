@@ -7,10 +7,8 @@ import (
 
 	"db-gateway-service/internal/database"
 	"db-gateway-service/internal/services"
-	"db-gateway-service/proto/checkin"
-	"db-gateway-service/proto/user"
-	"db-gateway-service/sql/check-in-service"
-	"db-gateway-service/sql/user-service"
+	"db-gateway-service/proto"
+	users "db-gateway-service/sql/user-service"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -47,18 +45,15 @@ func main() {
 
 	// Initialize repositories
 	userRepo := users.NewRepository(dbPool.GetDB())
-	checkInRepo := checkins.NewRepository(dbPool.GetDB())
 
 	// Create gRPC server
 	grpcServer := grpc.NewServer()
 
 	// Initialize and register services
 	userService := services.NewUserService(userRepo)
-	checkInService := services.NewCheckInService(checkInRepo)
 
 	// Register services with gRPC server
-	user.RegisterUserServiceServer(grpcServer, userService)
-	checkin.RegisterCheckInServiceServer(grpcServer, checkInService)
+	proto.RegisterUserServiceServer(grpcServer, userService)
 
 	// Enable reflection for development
 	reflection.Register(grpcServer)
@@ -71,7 +66,7 @@ func main() {
 
 	log.Printf("DB Gateway Service starting on port %s", port)
 	log.Printf("Database: %s:%s/%s", dbHost, dbPort, dbName)
-	
+
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
