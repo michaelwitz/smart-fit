@@ -8,6 +8,7 @@ import (
 	"db-gateway-service/proto"
 	users "db-gateway-service/sql/user-service"
 
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -161,10 +162,10 @@ func (s *UserService) VerifyUser(ctx context.Context, req *proto.VerifyUserReque
 		}, nil
 	}
 
-	// Note: The repository doesn't actually verify the password,
-	// so we need to do it here. In a real implementation, you'd use
-	// a proper password hashing library like bcrypt
-	if dbUser.Password != req.Password {
+	// Verify password using bcrypt
+	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password))
+	if err != nil {
+		log.Printf("Password verification failed: %v", err)
 		return &proto.VerifyUserResponse{
 			Valid: false,
 			Error: "Invalid credentials",

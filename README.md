@@ -26,16 +26,22 @@ A comprehensive fitness tracking and advice application built with a microservic
 ## Tech Stack
 
 - **API Gateway**: Go 1.23 + Gin framework (authentication, middleware)
-- **Microservices**: Go 1.23 + standard http package (business logic)
-- **Database**: PostgreSQL + SQLBoiler ORM
+- **Microservices**: Go 1.23 + gRPC (internal service communication)
+- **Database**: PostgreSQL + sqlx (direct SQL queries)
 - **Frontend**: React.js + Mantine UI + react-device-detect for mobile-first responsive design
 - **Containerization**: Docker + Docker Compose
   - **Build Images**: `golang:1.23-bookworm` (Debian-based for compatibility)
   - **Runtime Images**: `gcr.io/distroless/static-debian12:nonroot` (security-focused, minimal attack surface)
-- **Fault Tolerance**: failsafe-go library
-- **Communication**: HTTP/REST APIs
+- **Fault Tolerance**: failsafe-go library with circuit breaker pattern
+- **Communication**: 
+  - **External**: HTTP/REST APIs via API Gateway
+  - **Internal**: gRPC between microservices
 - **Documentation**: Swagger/OpenAPI 3.0 with interactive UI
 - **Analytics**: PostHog (client-side only)
+
+📚 **For detailed architecture decisions and conventions, see:**
+- [Ground Rules](docs/GroundRules.md) - Development conventions, database schema, gRPC architecture
+- [Functional Specifications](docs/FunctionalSpecs.md) - Detailed feature requirements and API specs
 
 ## 🛡️ Security Implementation
 
@@ -114,16 +120,57 @@ This application implements multiple layers of security following industry best 
 - Use the base URL: `http://localhost:8080`
 - Ensure all services are running via `docker-compose ps`
 
-### Service Endpoints
-- **API Service**:      `http://localhost:8080`
-- **User Service**:     `http://localhost:8082`
-- **Meal Service**:     `http://localhost:8083`
-- **Tracking Service**: `http://localhost:8084`
-- **Web Client**:       `http://localhost:5050`
-- **API Documentation (Swagger)**: `http://localhost:8080/swagger/index.html` 📖
+### Service Endpoints and Ports
+
+#### Active Services
+| Service | Type | Port | URL/Connection |
+|---------|------|------|-----------|
+| **API Gateway** | HTTP/REST | 8080 | `http://localhost:8080` |
+| **User Service** | gRPC | 8082 | `localhost:8082` |
+| **DB Gateway** | gRPC | 8086 | `localhost:8086` |
+| **Web Client** | React | 5050 | `http://localhost:5050` |
+| **PostgreSQL** | Database | 5432 | `postgresql://smartfit:smartfit123@localhost:5432/smartfitgirl` |
+| **Swagger UI** | Docs | 8080 | `http://localhost:8080/swagger/index.html` 📖 |
+
+#### Planned Services (Reserved Ports)
+| Service | Port | Status |
+|---------|------|--------|
+| Meal Service | 8083 | 🚧 Not Implemented |
+| Check-in Service | 8084 | 🚧 Not Implemented |
+| Survey Service | 8085 | 🚧 Not Implemented |
+| Notification Service | 8087 | 🚧 Future |
+| Analytics Service | 8088 | 🚧 Future |
+
+📋 **See [Ground Rules](docs/GroundRules.md#grpc-service-architecture-flow) for detailed service architecture and communication flow.**
+
+### Protocol Buffer (Proto) Generation
+
+#### Quick Start
+```bash
+# Generate all proto files from project root
+make proto-gen
+```
+
+#### Manual Generation
+```bash
+# Prerequisites (one-time setup)
+brew install protobuf  # macOS
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Generate for specific service
+cd services/[service-name]
+protoc --go_out=. --go_opt=paths=source_relative \
+       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+       proto/*.proto
+```
 
 ### Need Help?
-For any issues, check the service logs or consult the `/docs` directory for more detailed documentation.
+- **Service logs**: `docker-compose logs -f [service-name]`
+- **Documentation**: 
+  - [Ground Rules](docs/GroundRules.md) - Conventions and architecture
+  - [Functional Specs](docs/FunctionalSpecs.md) - Feature requirements
+  - [Testing Guide](TESTING.md) - API testing procedures
 
 ## Environment Variables
 
@@ -147,10 +194,20 @@ Before running the application, you must configure your environment variables:
    # JWT Configuration
    JWT_SECRET=your-super-secret-jwt-key
    
-   # SendGrid Email Service (for password reset functionality)
+   # Service Addresses (Docker networking)
+   USER_SERVICE_ADDR=user-service:8082
+   DB_GATEWAY_ADDR=db-gateway-service:8086
+   
+   # Service Ports (customizable)
+   API_SERVICE_HOST_PORT=8080
+   USER_SERVICE_HOST_PORT=8082
+   DB_GATEWAY_SERVICE_HOST_PORT=8086
+   WEB_CLIENT_HOST_PORT=5050
+   
+   # SendGrid Email Service (for password reset)
    SENDGRID_API_KEY=your-sendgrid-api-key
    
-   # PostHog Analytics (for React client)
+   # PostHog Analytics (React client)
    REACT_APP_POSTHOG_KEY=your-posthog-api-key
    REACT_APP_POSTHOG_HOST=https://app.posthog.com
    ```
@@ -265,19 +322,29 @@ You can also test individual services directly:
 
 ## Developer Setup and Notes
 
-### Local Development Ports (Docker Desktop)
-When running locally with `docker-compose`, services are accessible on these ports:
+### Port Assignment and Architecture
 
-| Service | Container Port | Host Port | Local URL |
-|---------|----------------|-----------|----------|
-| **API Service** (Gateway) | 8080 | 8080 | http://localhost:8080 |
-| **User Service** | 8080 | 8082 | http://localhost:8082 |
-| **Meal Service** | 8080 | 8083 | http://localhost:8083 |
-| **Tracking Service** | 8080 | 8084 | http://localhost:8084 |
-| **Web Client** (React) | 3000 | 5050 | http://localhost:5050 |
-| **PostgreSQL** | 5432 | 5432 | localhost:5432 |
+🏗️ **See [Ground Rules](docs/GroundRules.md#grpc-service-architecture-flow) for the complete service architecture diagram and communication patterns.**
 
-> **Note**: These ports are for local development only. Production/cloud deployments will use different port configurations.
+#### Port Allocation Strategy
+- **8080**: Reserved for API Gateway (never use for internal services)
+- **8082-8089**: gRPC microservices
+- **5000-5999**: Web applications
+- **5432**: PostgreSQL database
+
+#### Quick Reference
+| Port | Service | Status |
+|------|---------|--------|
+| 8080 | API Gateway | ✅ Active |
+| 8082 | User Service | ✅ Active |
+| 8083 | Meal Service | 🚧 Planned |
+| 8084 | Check-in Service | 🚧 Planned |
+| 8085 | Survey Service | 🚧 Planned |
+| 8086 | DB Gateway | ✅ Active |
+| 8087 | Notification Service | 🚧 Future |
+| 8088 | Analytics Service | 🚧 Future |
+| 5050 | Web Client | ✅ Active |
+| 5432 | PostgreSQL | ✅ Active |
 
 ### Development Workflow
 1. **Start services**: `make up` or `docker-compose up -d`
@@ -290,10 +357,9 @@ During development, you can test services directly:
 
 #### Health Check Endpoints
 ```bash
-curl http://localhost:8080/health  # API Service
-curl http://localhost:8082/health  # User Service
-curl http://localhost:8083/health  # Meal Service
-curl http://localhost:8084/health  # Tracking Service
+curl http://localhost:8080/health  # API Service (HTTP)
+curl http://localhost:8082/health  # User Service (gRPC - if HTTP health endpoint enabled)
+# Note: gRPC services may not have HTTP health endpoints by default
 ```
 
 #### User Service Examples

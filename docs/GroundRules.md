@@ -94,6 +94,53 @@ When adding columns or changing table structure:
 3. Focus on modular and reusable code
 4. Ensure tests are written and passing before merging into main branch
 
+## gRPC Service Architecture Flow
+
+### Service Communication Pattern
+```
+┌─────────────┐     HTTP/REST      ┌──────────────┐
+│   Client    │ ◄─────────────────► │  API Gateway │
+│  (React)    │                     │   (Port 8080)│
+└─────────────┘                     └──────┬───────┘
+                                           │
+                    ┌──────────────────────┼──────────────────────┐
+                    │                      │                      │
+                gRPC │                  gRPC │                  gRPC │
+                    ▼                      ▼                      ▼
+          ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+          │ User Service │      │ Meal Service │      │Survey Service│
+          │ (Port 8082)  │      │ (Port 8083)  │      │ (Port 8085)  │
+          └──────┬───────┘      └──────┬───────┘      └──────┬───────┘
+                 │                      │                      │
+              gRPC │                 gRPC │                 gRPC │
+                 └──────────────────────┼──────────────────────┘
+                                        ▼
+                              ┌──────────────────┐
+                              │ DB Gateway Service│
+                              │   (Port 8086)    │
+                              └────────┬─────────┘
+                                       │
+                                    SQL │
+                                       ▼
+                              ┌──────────────────┐
+                              │   PostgreSQL     │
+                              │   (Port 5432)    │
+                              └──────────────────┘
+```
+
+### Key Architecture Decisions
+1. **API Gateway Pattern**: Single entry point for all client requests (port 8080)
+2. **gRPC for Internal Communication**: High-performance binary protocol between services
+3. **DB Gateway Service**: Centralized database access layer for all microservices
+4. **Circuit Breaker Pattern**: Fault tolerance using failsafe-go library
+5. **JWT Authentication**: Handled at API Gateway level, not in individual services
+
+### Service Responsibilities
+- **API Gateway (8080)**: Authentication, routing, HTTP/gRPC translation
+- **User Service (8082)**: User management, authentication logic, password hashing
+- **DB Gateway (8086)**: All database operations, connection pooling, query execution
+- **Other Services**: Pure business logic, no direct database access
+
 ## Communication
 
 - Regular updates in team meetings every Monday

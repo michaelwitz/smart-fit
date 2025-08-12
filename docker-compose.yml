@@ -25,66 +25,65 @@ services:
     container_name: smart-fit-user-service
     ports:
       - "${USER_SERVICE_HOST_PORT:-8082}:8082"  # gRPC port
-    env_file:
-      - .env
     environment:
-      - DB_HOST=postgres  # Override for Docker network
+      - DB_GATEWAY_ADDR=db-gateway-service:8086
       - GRPC_PORT=8082
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - db-gateway-service
     networks:
       - smart-fit-network
 
-  # Meal Service
-  meal-service:
-    build:
-      context: ./services/meal-service
-      dockerfile: Dockerfile
-    container_name: smart-fit-meal-service
-    ports:
-      - "${MEAL_SERVICE_HOST_PORT:-8083}:8080"
-    env_file:
-      - .env
-    environment:
-      - DB_HOST=postgres  # Override for Docker network
-    depends_on:
-      - postgres
-    networks:
-      - smart-fit-network
+  # Meal Service (NOT IMPLEMENTED YET)
+  # meal-service:
+  #   build:
+  #     context: ./services/meal-service
+  #     dockerfile: Dockerfile
+  #   container_name: smart-fit-meal-service
+  #   ports:
+  #     - "${MEAL_SERVICE_HOST_PORT:-8083}:8080"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - DB_HOST=postgres  # Override for Docker network
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - smart-fit-network
 
-  # Check-in Service
-  check-in-service:
-    build:
-      context: ./services/check-in-service
-      dockerfile: Dockerfile
-    container_name: smart-fit-check-in-service
-    ports:
-      - "${CHECK_IN_SERVICE_HOST_PORT:-8084}:8080"
-    env_file:
-      - .env
-    environment:
-      - DB_HOST=postgres  # Override for Docker network
-    depends_on:
-      - postgres
-    networks:
-      - smart-fit-network
+  # Check-in Service (NOT IMPLEMENTED YET)
+  # check-in-service:
+  #   build:
+  #     context: ./services/check-in-service
+  #     dockerfile: Dockerfile
+  #   container_name: smart-fit-check-in-service
+  #   ports:
+  #     - "${CHECK_IN_SERVICE_HOST_PORT:-8084}:8080"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - DB_HOST=postgres  # Override for Docker network
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - smart-fit-network
 
-  # Survey Service
-  survey-service:
-    build:
-      context: ./services/survey-service
-      dockerfile: Dockerfile
-    container_name: smart-fit-survey-service
-    ports:
-      - "${SURVEY_SERVICE_HOST_PORT:-8085}:8080"
-    env_file:
-      - .env
-    environment:
-      - DB_HOST=postgres  # Override for Docker network
-    depends_on:
-      - postgres
-    networks:
-      - smart-fit-network
+  # Survey Service (NOT IMPLEMENTED YET)
+  # survey-service:
+  #   build:
+  #     context: ./services/survey-service
+  #     dockerfile: Dockerfile
+  #   container_name: smart-fit-survey-service
+  #   ports:
+  #     - "${SURVEY_SERVICE_HOST_PORT:-8085}:8080"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - DB_HOST=postgres  # Override for Docker network
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - smart-fit-network
 
   # DB Gateway Service
   db-gateway-service:
@@ -97,6 +96,7 @@ services:
     env_file:
       - .env
     environment:
+      - SERVICE_PORT=8086  # Override to use 8086 instead of default 8080
       - DB_HOST=postgres  # Override for Docker network
     depends_on:
       - postgres
@@ -117,9 +117,9 @@ services:
       - USER_SERVICE_ADDR=user-service:8082
     depends_on:
       - user-service
-      - meal-service
-      - check-in-service
-      - survey-service
+      # - meal-service  # Not implemented yet
+      # - check-in-service  # Not implemented yet
+      # - survey-service  # Not implemented yet
     networks:
       - smart-fit-network
 
