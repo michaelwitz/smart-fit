@@ -273,6 +273,7 @@ The application follows a microservices architecture with clear service boundari
 #### Security Architecture
 
 1. **Password Flow**:
+
    - Client sends plain text password to API Gateway (over HTTPS in production)
    - API Gateway forwards plain text password to User Service via gRPC
    - User Service forwards to DB Gateway Service for verification
@@ -280,6 +281,7 @@ The application follows a microservices architecture with clear service boundari
    - Boolean result returned up the service chain
 
 2. **Security Principles**:
+
    - **Never hash passwords for inter-service communication** - Hashing is not encryption
    - **Single responsibility** - Only DB Gateway handles password verification
    - **Bcrypt hashing** - Industry standard with cost factor 10+
@@ -313,6 +315,7 @@ err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password
 ### Security Checklist
 
 #### Current Implementation
+
 - ✅ Bcrypt password hashing before storage
 - ✅ Plain text passwords never logged
 - ✅ Password verification at database service layer
@@ -322,6 +325,7 @@ err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password
 - ✅ SendGrid integration for secure email delivery
 
 #### Production Recommendations
+
 - [ ] TLS/mTLS for service-to-service communication
 - [ ] Rate limiting for login attempts
 - [ ] Account lockout after failed attempts
@@ -337,6 +341,7 @@ err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password
 ### Port Assignment Guidelines
 
 1. **Ground Rules**:
+
    - Port 8080: Reserved exclusively for the main API Gateway (HTTP)
    - Ports 8082-8089: Reserved for internal gRPC microservices
    - Ports 5000-5999: Reserved for web applications and UI
@@ -345,23 +350,23 @@ err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password
 
 2. **Current Assignments**:
 
-| Service | Type | Port | Purpose |
-|---------|------|------|----------|
-| **API Gateway** | HTTP REST | 8080 | Main public-facing API |
-| **User Service** | gRPC | 8082 | User authentication & management |
-| **DB Gateway** | gRPC | 8086 | Database access layer |
-| **Web Client** | React | 5050 | Web application UI |
-| **PostgreSQL** | Database | 5432 | Primary database |
+| Service          | Type      | Port | Purpose                          |
+| ---------------- | --------- | ---- | -------------------------------- |
+| **API Gateway**  | HTTP REST | 8080 | Main public-facing API           |
+| **User Service** | gRPC      | 8082 | User authentication & management |
+| **DB Gateway**   | gRPC      | 8086 | Database access layer            |
+| **Web Client**   | React     | 5050 | Web application UI               |
+| **PostgreSQL**   | Database  | 5432 | Primary database                 |
 
 3. **Future Service Reservations**:
 
-| Service | Type | Port | Purpose |
-|---------|------|------|----------|
-| **Meal Service** | gRPC | 8083 | Meal planning & nutrition |
-| **Check-in Service** | gRPC | 8084 | Daily check-ins & progress |
-| **Survey Service** | gRPC | 8085 | User surveys & questionnaires |
-| **Notification Service** | gRPC | 8087 | Email/SMS notifications |
-| **Analytics Service** | gRPC | 8088 | Analytics & reporting |
+| Service                  | Type | Port | Purpose                       |
+| ------------------------ | ---- | ---- | ----------------------------- |
+| **Meal Service**         | gRPC | 8083 | Meal planning & nutrition     |
+| **Check-in Service**     | gRPC | 8084 | Daily check-ins & progress    |
+| **Survey Service**       | gRPC | 8085 | User surveys & questionnaires |
+| **Notification Service** | gRPC | 8087 | Email/SMS notifications       |
+| **Analytics Service**    | gRPC | 8088 | Analytics & reporting         |
 
 ### Service Communication
 
@@ -373,6 +378,7 @@ err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password
 ### Testing & Verification
 
 All authentication tests pass successfully:
+
 - `TestHealthEndpoint`: Service health checks
 - `TestLoginEndpoint`: User authentication flow
 - `TestProtectedEndpoint`: JWT token validation
@@ -382,6 +388,7 @@ All authentication tests pass successfully:
 - `TestEndToEndFlow`: Complete authentication workflow
 
 Run tests with:
+
 ```bash
 cd services/api-service
 go test -v
