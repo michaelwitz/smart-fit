@@ -215,6 +215,7 @@ The primary intention of Smart Fit is to bridge the gap between fitness goals an
 ## Database Table Descriptions
 
 ### **USERS Table**
+
 Stores user profiles with international support and authentication:
 
 - **id**: Primary key (auto-increment)
@@ -234,6 +235,7 @@ Stores user profiles with international support and authentication:
 - **updated_at**: Last profile update timestamp
 
 ### **GOALS Table**
+
 Stores available fitness goals organized by categories:
 
 - **id**: Primary key (auto-increment)
@@ -244,6 +246,7 @@ Stores available fitness goals organized by categories:
 - **updated_at**: Last goal update timestamp
 
 ### **USER_GOALS Table**
+
 Junction table linking users to their selected goals:
 
 - **id**: Primary key (auto-increment)
@@ -253,6 +256,7 @@ Junction table linking users to their selected goals:
 - **UNIQUE constraint**: (user_id, goal_id) - prevents duplicate goal assignments
 
 ### **FOOD_CATALOG Table**
+
 Comprehensive food database with nutritional information and health properties:
 
 - **id**: Primary key (auto-increment)
@@ -271,6 +275,7 @@ Comprehensive food database with nutritional information and health properties:
 - **updated_at**: Last update timestamp
 
 ### **FOOD_USER_LIKES Table**
+
 Junction table tracking user food preferences:
 
 - **id**: Primary key (auto-increment)
@@ -280,6 +285,7 @@ Junction table tracking user food preferences:
 - **UNIQUE constraint**: (user_id, food_id) - prevents duplicate preferences
 
 ### **MEALS Table**
+
 Stores meal definitions with nutritional totals and preparation instructions:
 
 - **id**: Primary key (auto-increment)
@@ -295,6 +301,7 @@ Stores meal definitions with nutritional totals and preparation instructions:
 - **updated_at**: Last update timestamp
 
 ### **MEAL_INGREDIENTS Table**
+
 Junction table defining meal composition with quantities:
 
 - **id**: Primary key (auto-increment)
@@ -306,6 +313,7 @@ Junction table defining meal composition with quantities:
 - **created_at**: Ingredient addition timestamp
 
 ### **USER_MEALS Table**
+
 Tracks user meal consumption by date and meal number:
 
 - **id**: Primary key (auto-increment)
