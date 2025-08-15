@@ -1,56 +1,56 @@
 id,food_name,category,serving_units,calories,protein_grams,carbs_grams,fat_grams,is_non_inflammatory,is_probiotic,is_prebiotic,notes,created_at,updated_at
-14,A2 Milk,Dairy,cup,150.00,8.00,12.00,8.00,t,f,f,A2 protein variant,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-9,Cheddar Cheese,Dairy,ounces,115.00,7.00,1.00,9.00,f,f,f,Aged hard cheese,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-12,Coconut Milk - Canned,Dairy,cup,445.00,5.00,6.00,48.00,t,f,f,High in saturated fats,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-15,Cow Milk - Regular,Dairy,cup,150.00,8.00,12.00,8.00,f,f,f,Standard dairy milk,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-17,Eggs - Duck,Dairy,item,130.00,9.00,1.00,10.00,t,f,f,Richer flavor than chicken eggs,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-16,Eggs - Large Chicken,Dairy,item,70.00,6.00,0.50,5.00,t,f,f,Complete protein source,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-18,Eggs - Quail,Dairy,item,14.00,1.20,0.00,1.00,t,f,f,Small gourmet eggs,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-10,Goat Cheese,Dairy,ounces,75.00,5.00,0.00,6.00,t,f,f,Easier to digest than cow cheese,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-13,Goat Milk,Dairy,cup,168.00,9.00,11.00,10.00,t,f,f,Alternative to cow milk,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-11,Greek Yogurt - Plain,Dairy,cup,130.00,23.00,9.00,0.00,t,t,f,Contains beneficial bacteria,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-2,Cod Fillet,Fish,ounces,70.00,15.00,0.00,0.50,t,f,f,Lean white fish,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-1,Salmon - Wild Atlantic,Fish,ounces,155.00,22.00,0.00,7.00,t,f,f,High in omega-3 fatty acids,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-4,Sardines,Fish,ounces,125.00,15.00,0.00,7.00,t,f,f,Small fish with bones for calcium,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-3,Tuna - Yellowfin,Fish,ounces,92.00,20.00,0.00,1.00,t,f,f,Low mercury option,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-49,Apple - Medium,Fruits,cup,95.00,0.00,25.00,0.00,t,f,t,High in pectin fiber,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-48,Avocado,Fruits,cup,240.00,3.00,12.00,22.00,t,f,f,Healthy monounsaturated fats,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-50,Banana - Medium,Fruits,cup,105.00,1.00,27.00,0.00,t,f,t,Good source of potassium,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-46,Blueberries,Fruits,cup,80.00,1.00,21.00,0.00,t,f,f,High in antioxidants,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-51,Grapes,Fruits,cup,62.00,0.00,16.00,0.00,t,f,f,Natural sugars,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-52,Orange,Fruits,cup,62.00,1.00,15.00,0.00,t,f,f,High in vitamin C,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-47,Strawberries,Fruits,cup,50.00,1.00,12.00,0.00,t,f,f,High in vitamin C,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-31,Brown Rice - Cooked,Grains,cup,220.00,5.00,45.00,2.00,t,f,f,Whole grain with fiber,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-33,Quinoa - Cooked,Grains,cup,220.00,8.00,39.00,4.00,t,f,f,Complete protein grain,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-32,White Rice - Cooked,Grains,cup,205.00,4.00,45.00,0.00,f,f,f,Refined grain - higher glycemic,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-55,Garlic - Fresh,Herbs,tsp,4.00,0.00,1.00,0.00,t,f,t,Immune system support,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-54,Ginger - Fresh,Herbs,tsp,1.00,0.00,0.00,0.00,t,f,f,Digestive aid and anti-inflammatory,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-53,Turmeric - Ground,Herbs,tsp,8.00,0.00,1.00,0.00,t,f,f,Powerful anti-inflammatory compound,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-41,Black Beans - Cooked,Legumes,cup,230.00,15.00,41.00,1.00,f,f,f,May cause digestive issues,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-42,Lentils - Cooked,Legumes,cup,230.00,18.00,40.00,1.00,f,f,f,High protein legume,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-40,Peanuts,Legumes,ounces,160.00,7.00,5.00,14.00,f,f,f,Legume not a nut - may cause inflammation,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-7,Bison - Ground,Meat,ounces,120.00,20.00,0.00,4.00,f,f,f,Grass-fed lean meat,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-5,Chicken Breast - Skinless,Meat,ounces,140.00,26.00,0.00,3.00,f,f,f,Lean protein source,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-6,Ground Beef - 85% Lean,Meat,ounces,160.00,22.00,0.00,7.00,f,f,f,Moderate fat content,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-8,Pork Tenderloin,Meat,ounces,125.00,22.00,0.00,3.50,f,f,f,Lean cut of pork,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-27,Bell Pepper - Red,Nightshades,cup,30.00,1.00,7.00,0.00,f,f,f,Nightshade family - may cause inflammation,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-29,Eggplant,Nightshades,cup,20.00,1.00,5.00,0.00,f,f,f,Nightshade family - contains solanine,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-30,Potato - Russet,Nightshades,cup,160.00,4.00,37.00,0.00,f,f,f,Nightshade family - high glycemic,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-28,Tomatoes,Nightshades,cup,32.00,2.00,7.00,0.00,f,f,f,Nightshade family - acidic,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-35,Almonds - Blanched,Nuts,ounces,160.00,6.00,6.00,14.00,t,f,f,Skin removed - less inflammatory,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-34,Almonds - Whole,Nuts,ounces,160.00,6.00,6.00,14.00,f,f,f,Skin may cause inflammation for some,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-37,Pistachios,Nuts,ounces,160.00,6.00,8.00,13.00,t,f,f,High in antioxidants,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-36,Walnuts,Nuts,ounces,185.00,4.00,4.00,18.00,t,f,f,Rich in omega-3 fatty acids,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-45,Avocado Oil,Oils,tbsp,120.00,0.00,0.00,14.00,t,f,f,High smoke point for cooking,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-44,Coconut Oil,Oils,tbsp,120.00,0.00,0.00,14.00,t,f,f,Medium chain triglycerides,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-43,Olive Oil - Extra Virgin,Oils,tbsp,120.00,0.00,0.00,14.00,t,f,f,Anti-inflammatory properties,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-38,Chia Seeds,Seeds,tbsp,60.00,3.00,5.00,4.00,t,f,t,High in omega-3 and fiber,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-39,Flaxseeds - Ground,Seeds,tbsp,37.00,1.30,2.00,3.00,t,f,t,Must be ground for absorption,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-21,Asparagus,Vegetables,cup,20.00,2.00,4.00,0.00,t,f,t,Natural diuretic properties,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-19,Broccoli,Vegetables,cup,25.00,3.00,5.00,0.00,t,f,t,High in fiber and vitamins,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-24,Carrots,Vegetables,cup,50.00,1.00,12.00,0.00,t,f,t,High in beta-carotene,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-23,Kale,Vegetables,cup,33.00,2.00,7.00,0.00,t,f,f,Superfood high in nutrients,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-26,Kimchee,Vegetables,cup,23.00,2.00,4.00,0.00,t,t,f,Korean fermented vegetables,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-25,Sauerkraut,Vegetables,cup,27.00,1.00,6.00,0.00,t,t,f,Fermented cabbage with probiotics,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-20,Spinach - Raw,Vegetables,cup,7.00,1.00,1.00,0.00,t,f,f,High in iron and folate,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
-22,Sweet Potato,Vegetables,cup,180.00,4.00,41.00,0.00,t,f,t,High in beta-carotene,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+14,A2 Milk,DAIRY,cup,150.00,8.00,12.00,8.00,t,f,f,A2 protein variant,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+9,Cheddar Cheese,DAIRY,ounces,115.00,7.00,1.00,9.00,f,f,f,Aged hard cheese,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+12,Coconut Milk - Canned,DAIRY_ALTERNATIVE,cup,445.00,5.00,6.00,48.00,t,f,f,High in saturated fats,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+15,Cow Milk - Regular,DAIRY,cup,150.00,8.00,12.00,8.00,f,f,f,Standard dairy milk,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+17,Eggs - Duck,DAIRY,PIECES,130.00,9.00,1.00,10.00,t,f,f,Richer flavor than chicken eggs,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+16,Eggs - Large Chicken,DAIRY,PIECES,70.00,6.00,0.50,5.00,t,f,f,Complete protein source,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+18,Eggs - Quail,DAIRY,PIECES,14.00,1.20,0.00,1.00,t,f,f,Small gourmet eggs,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+10,Goat Cheese,DAIRY,ounces,75.00,5.00,0.00,6.00,t,f,f,Easier to digest than cow cheese,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+13,Goat Milk,DAIRY_ALTERNATIVE,cup,168.00,9.00,11.00,10.00,t,f,f,Alternative to cow milk,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+11,Greek Yogurt - Plain,DAIRY,cup,130.00,23.00,9.00,0.00,t,t,f,Contains beneficial bacteria,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+2,Cod Fillet,FISH,ounces,70.00,15.00,0.00,0.50,t,f,f,Lean white fish,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+1,Salmon - Wild Atlantic,FISH,ounces,155.00,22.00,0.00,7.00,t,f,f,High in omega-3 fatty acids,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+4,Sardines,FISH,ounces,125.00,15.00,0.00,7.00,t,f,f,Small fish with bones for calcium,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+3,Tuna - Yellowfin,FISH,ounces,92.00,20.00,0.00,1.00,t,f,f,Low mercury option,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+49,Apple - Medium,FRUIT,PIECES,95.00,0.00,25.00,0.00,t,f,t,High in pectin fiber,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+48,Avocado,FRUIT,PIECES,240.00,3.00,12.00,22.00,t,f,f,Healthy monounsaturated fats,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+50,Banana - Medium,FRUIT,PIECES,105.00,1.00,27.00,0.00,t,f,t,Good source of potassium,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+46,Blueberries,FRUIT,cup,80.00,1.00,21.00,0.00,t,f,f,High in antioxidants,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+51,Grapes,FRUIT,cup,62.00,0.00,16.00,0.00,t,f,f,Natural sugars,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+52,Orange,FRUIT,PIECES,62.00,1.00,15.00,0.00,t,f,f,High in vitamin C,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+47,Strawberries,FRUIT,cup,50.00,1.00,12.00,0.00,t,f,f,High in vitamin C,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+31,Brown Rice - Cooked,GRAIN,cup,220.00,5.00,45.00,2.00,t,f,f,Whole grain with fiber,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+33,Quinoa - Cooked,GRAIN,cup,220.00,8.00,39.00,4.00,t,f,f,Complete protein grain,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+32,White Rice - Cooked,GRAIN,cup,205.00,4.00,45.00,0.00,f,f,f,Refined grain - higher glycemic,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+55,Garlic - Fresh,SPICE_HERB,tsp,4.00,0.00,1.00,0.00,t,f,t,Immune system support,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+54,Ginger - Fresh,SPICE_HERB,tsp,1.00,0.00,0.00,0.00,t,f,f,Digestive aid and anti-inflammatory,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+53,Turmeric - Ground,SPICE_HERB,tsp,8.00,0.00,1.00,0.00,t,f,f,Powerful anti-inflammatory compound,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+41,Black Beans - Cooked,LEGUMES,cup,230.00,15.00,41.00,1.00,f,f,f,May cause digestive issues,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+42,Lentils - Cooked,LEGUMES,cup,230.00,18.00,40.00,1.00,f,f,f,High protein legume,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+40,Peanuts,LEGUMES,ounces,160.00,7.00,5.00,14.00,f,f,f,Legume not a nut - may cause inflammation,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+7,Bison - Ground,MEAT,ounces,120.00,20.00,0.00,4.00,f,f,f,Grass-fed lean meat,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+5,Chicken Breast - Skinless,MEAT,ounces,140.00,26.00,0.00,3.00,f,f,f,Lean protein source,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+6,Ground Beef - 85% Lean,MEAT,ounces,160.00,22.00,0.00,7.00,f,f,f,Moderate fat content,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+8,Pork Tenderloin,MEAT,ounces,125.00,22.00,0.00,3.50,f,f,f,Lean cut of pork,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+27,Bell Pepper - Red,NIGHTSHADES,cup,30.00,1.00,7.00,0.00,f,f,f,Nightshade family - may cause inflammation,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+29,Eggplant,NIGHTSHADES,cup,20.00,1.00,5.00,0.00,f,f,f,Nightshade family - contains solanine,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+30,Potato - Russet,NIGHTSHADES,cup,160.00,4.00,37.00,0.00,f,f,f,Nightshade family - high glycemic,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+28,Tomatoes,NIGHTSHADES,cup,32.00,2.00,7.00,0.00,f,f,f,Nightshade family - acidic,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+35,Almonds - Blanched,NUTS,ounces,160.00,6.00,6.00,14.00,t,f,f,Skin removed - less inflammatory,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+34,Almonds - Whole,NUTS,ounces,160.00,6.00,6.00,14.00,f,f,f,Skin may cause inflammation for some,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+37,Pistachios,NUTS,ounces,160.00,6.00,8.00,13.00,t,f,f,High in antioxidants,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+36,Walnuts,NUTS,ounces,185.00,4.00,4.00,18.00,t,f,f,Rich in omega-3 fatty acids,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+45,Avocado Oil,OIL,tbsp,120.00,0.00,0.00,14.00,t,f,f,High smoke point for cooking,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+44,Coconut Oil,OIL,tbsp,120.00,0.00,0.00,14.00,t,f,f,Medium chain triglycerides,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+43,Olive Oil - Extra Virgin,OIL,tbsp,120.00,0.00,0.00,14.00,t,f,f,Anti-inflammatory properties,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+38,Chia Seeds,SEEDS,tbsp,60.00,3.00,5.00,4.00,t,f,t,High in omega-3 and fiber,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+39,Flaxseeds - Ground,SEEDS,tbsp,37.00,1.30,2.00,3.00,t,f,t,Must be ground for absorption,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+21,Asparagus,VEGETABLE,cup,20.00,2.00,4.00,0.00,t,f,t,Natural diuretic properties,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+19,Broccoli,VEGETABLE,cup,25.00,3.00,5.00,0.00,t,f,t,High in fiber and vitamins,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+24,Carrots,VEGETABLE,cup,50.00,1.00,12.00,0.00,t,f,t,High in beta-carotene,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+23,Kale,VEGETABLE,cup,33.00,2.00,7.00,0.00,t,f,f,Superfood high in nutrients,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+26,Kimchee,VEGETABLE,cup,23.00,2.00,4.00,0.00,t,t,f,Korean fermented vegetables,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+25,Sauerkraut,VEGETABLE,cup,27.00,1.00,6.00,0.00,t,t,f,Fermented cabbage with probiotics,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+20,Spinach - Raw,VEGETABLE,cup,7.00,1.00,1.00,0.00,t,f,f,High in iron and folate,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
+22,Sweet Potato,VEGETABLE,cup,180.00,4.00,41.00,0.00,t,f,t,High in beta-carotene,2025-08-02 19:41:42.994461,2025-08-02 19:41:42.994461
